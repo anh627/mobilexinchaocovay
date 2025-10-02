@@ -631,56 +631,56 @@
             createBackgroundAnimation();
             updateDisplay();
             startTimer();
-           
-            // Event listeners for buttons (using touchstart for mobile)
-            document.querySelectorAll('.board-size-selector .difficulty-btn').forEach(btn => {
+             setupEventListeners(); // Call to set up event listeners
+            if (gameState.currentPlayer === gameState.aiColor && gameState.gameMode === 'ai') {
+                setTimeout(() => makeAiMove(), 1000);
+            }
+        }
+        function setupEventListeners() {
+            // Use touchstart for mobile
+            const buttons = [
+                { id: 'vsAIBtn', handler: handleVsAI },
+                { id: 'twoPlayersBtn', handler: handleTwoPlayers },
+                { id: 'passBtn', handler: handlePass },
+                { id: 'undoBtn', handler: handleUndo },
+                { id: 'newGameBtn', handler: () => initGame() },
+                { id: 'scoreBtn', handler: showScore },
+                { id: 'tutorialBtn', handler: showTutorial },
+                { id: 'playAsBlack', handler: () => setPlayerColor(BLACK, WHITE) },
+                { id: 'playAsWhite', handler: () => setPlayerColor(WHITE, BLACK) }
+            ];
+            buttons.forEach(({ id, handler }) => {
+                const btn = document.getElementById(id);
+                if (btn) {
+                    btn.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handler();
+                    }, { passive: false });
+                }
+            });
+            const boardSizeButtons = document.querySelectorAll('.board-size-selector .difficulty-btn');
+            boardSizeButtons.forEach(btn => {
                 btn.addEventListener('touchstart', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    document.querySelectorAll('.board-size-selector .difficulty-btn').forEach(b => b.classList.remove('active'));
+                    boardSizeButtons.forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
-                    gameState.boardSize = parseInt(btn.dataset.size);
+                    gameState.boardSize = parseInt(e.target.dataset.size);
                     initGame();
                 }, { passive: false });
             });
-           
-            document.querySelectorAll('.difficulty-selector .difficulty-btn').forEach(btn => {
+            const difficultyButtons = document.querySelectorAll('.difficulty-selector .difficulty-btn');
+            difficultyButtons.forEach(btn => {
                 btn.addEventListener('touchstart', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    document.querySelectorAll('.difficulty-selector .difficulty-btn').forEach(b => b.classList.remove('active'));
+                    difficultyButtons.forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
-                    gameState.difficulty = btn.dataset.difficulty;
+                    gameState.difficulty = e.target.dataset.difficulty;
                 }, { passive: false });
-            });
-           
-            document.getElementById('playAsBlack').addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                gameState.humanColor = BLACK;
-                gameState.aiColor = WHITE;
-                initGame();
-            }, { passive: false });
-           
-            document.getElementById('playAsWhite').addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                gameState.humanColor = WHITE;
-                gameState.aiColor = BLACK;
-                initGame();
-            }, { passive: false });
-           
-            // Game mode buttons
-            document.getElementById('vsAIBtn').addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                gameState.gameMode = 'ai';
-                document.getElementById('vsAIBtn').className = 'button button-primary';
-                document.getElementById('twoPlayersBtn').className = 'button button-secondary';
-                document.getElementById('aiSettings').style.display = 'block';
-                initGame();
-            }, { passive: false });
-           
+          
+    
             document.getElementById('twoPlayersBtn').addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
