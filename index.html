@@ -39,9 +39,38 @@
             border-radius: 50%;
             animation: sparkle 4s ease-in-out infinite;
         }
+        .sparkle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: radial-gradient(circle, #fff, #4ecdc4);
+            border-radius: 50%;
+            animation: twinkle 3s ease-in-out infinite;
+        }
         @keyframes sparkle {
             0%, 100% { transform: translateY(0) scale(0); opacity: 0; }
             50% { transform: translateY(-100px) scale(1); opacity: 0.8; }
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); box-shadow: 0 0 5px #fff; }
+            25% { opacity: 1; transform: scale(1) rotate(90deg); box-shadow: 0 0 15px #4ecdc4, 0 0 25px #fff; }
+            75% { opacity: 0.8; transform: scale(0.8) rotate(270deg); box-shadow: 0 0 10px #ff6b6b; }
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0; }
+            50% { transform: translateY(-100px) rotate(180deg); opacity: 1; }
+        }
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(102, 126, 234, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(102, 126, 234, 0.8); }
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         .container {
             max-width: 100%;
@@ -375,6 +404,30 @@
         .difficulty-btn.hard {
             background: linear-gradient(135deg, #dc3545, #ff6b6b);
         }
+        .keyboard-hints {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        .keyboard-hints h4 {
+            color: white;
+            margin-bottom: 5px;
+        }
+        .hint-item {
+            display: flex;
+            justify-content: space-between;
+            color: rgba(255, 255, 255, 0.8);
+            margin: 3px 0;
+            font-size: 0.8rem;
+        }
+        .key {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -446,6 +499,15 @@
                         <button class="button button-secondary" id="playAsWhite">⚪ White</button>
                     </div>
                 </div>
+                <div class="keyboard-hints">
+                    <h4>👆 Touch Hints</h4>
+                    <div class="hint-item">
+                        <span>Tap intersection to place stone</span>
+                    </div>
+                    <div class="hint-item">
+                        <span>Tap buttons for actions</span>
+                    </div>
+                </div>
             </div>
             <div class="panel">
                 <h3>📊 Statistics</h3>
@@ -479,6 +541,27 @@
                 </div>
             </div>
             <div class="panel">
+                <h3>🧠 AI Features</h3>
+                <div style="color: rgba(255,255,255,0.9); line-height: 1.6;">
+                    <div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                        <strong>🎯 Smart Territory Recognition</strong><br>
+                        AI can identify and protect territory
+                    </div>
+                    <div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                        <strong>⚔️ Tactical Combat</strong><br>
+                        Advanced capture and escape patterns
+                    </div>
+                    <div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                        <strong>🏗️ Opening Knowledge</strong><br>
+                        Knows corner and side patterns
+                    </div>
+                    <div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                        <strong>🔬 Deep Analysis</strong><br>
+                        Multi-level position evaluation
+                    </div>
+                </div>
+            </div>
+            <div class="panel">
                 <h3>📈 Game Progress</h3>
                 <div id="gamePhase" style="color: white; text-align: center; font-size: 1rem; font-weight: bold; margin: 10px 0;">Opening</div>
                 <div style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; margin: 10px 0;">
@@ -496,1050 +579,1045 @@
         </div>
     </div>
     <script>
-        (function() {
-            // Security: Obfuscated core game state
-            const _0x1234 = {
-                board: [],
-                boardSize: 9,
-                currentPlayer: 1,
-                gameMode: 'ai',
-                humanColor: 1,
-                aiColor: 2,
-                difficulty: 'medium',
-                captures: { black: 0, white: 0 },
-                moveHistory: [],
-                passCount: 0,
-                gamePhase: 'opening',
-                isAiThinking: false,
-                timeLeft: 60,
-                timerInterval: null
-            };
-            const EMPTY = 0;
-            const BLACK = 1;
-            const WHITE = 2;
-            const BOARD_SIZES = [9, 13, 19];
-            const AI_CONFIG = {
-                easy: { depth: 1, randomness: 0.4, territoryWeight: 0.3, captureWeight: 0.5, patternWeight: 0.2 },
-                medium: { depth: 2, randomness: 0.2, territoryWeight: 0.5, captureWeight: 0.7, patternWeight: 0.4 },
-                hard: { depth: 3, randomness: 0.1, territoryWeight: 0.8, captureWeight: 1.0, patternWeight: 0.7 }
-            };
-
-            // Security: Anti-debugging
-            (function() {
-                const devTools = /./;
-                devTools.toString = function() { return 'open'; };
-                let checkCount = 0;
-                const checkDebugger = setInterval(() => {
-                    try {
-                        if (window.console && console.log.toString().indexOf('native') === -1) {
-                            window.location.reload();
-                        }
-                        if (String(devTools) === 'open') {
-                            checkCount++;
-                            if (checkCount > 3) {
-                                window.location.href = 'about:blank';
-                            }
-                        }
-                    } catch (e) {}
-                }, 1000);
-                window.addEventListener('resize', () => {
-                    if (window.outerWidth - window.innerWidth > 150 || window.outerHeight - window.innerHeight > 150) {
-                        window.location.reload();
-                    }
-                });
-            })();
-
-            // Security: Disable console methods
-            const consoleMethods = ['log', 'warn', 'error', 'info', 'debug'];
-            consoleMethods.forEach(method => {
-                console[method] = () => {};
+        // Game state
+        let gameState = {
+            board: [],
+            boardSize: 9,
+            currentPlayer: 1, // 1 = black, 2 = white
+            gameMode: 'ai', // 'ai' or 'twoPlayers'
+            humanColor: 1,
+            aiColor: 2,
+            difficulty: 'medium',
+            captures: { black: 0, white: 0 },
+            moveHistory: [],
+            passCount: 0,
+            gamePhase: 'opening',
+            isAiThinking: false,
+            timeLeft: 60,
+            timerInterval: null
+        };
+        // Constants
+        const EMPTY = 0;
+        const BLACK = 1;
+        const WHITE = 2;
+        const BOARD_SIZES = [9, 13, 19];
+        // AI difficulty levels with enhanced features
+        const AI_CONFIG = {
+            easy: {
+                depth: 1,
+                randomness: 0.4,
+                territoryWeight: 0.3,
+                captureWeight: 0.5,
+                patternWeight: 0.2
+            },
+            medium: {
+                depth: 2,
+                randomness: 0.2,
+                territoryWeight: 0.5,
+                captureWeight: 0.7,
+                patternWeight: 0.4
+            },
+            hard: {
+                depth: 3,
+                randomness: 0.1,
+                territoryWeight: 0.8,
+                captureWeight: 1.0,
+                patternWeight: 0.7
+            }
+        };
+        // Initialize game
+        function initGame() {
+            createBoard();
+            createBackgroundAnimation();
+            updateDisplay();
+            startTimer();
+           
+            // Event listeners for buttons (using touchstart for mobile)
+            document.querySelectorAll('.board-size-selector .difficulty-btn').forEach(btn => {
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    document.querySelectorAll('.board-size-selector .difficulty-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    gameState.boardSize = parseInt(btn.dataset.size);
+                    initGame();
+                }, { passive: false });
             });
-
-            function initGame() {
-                createBoard();
-                createBackgroundAnimation();
-                updateDisplay();
-                startTimer();
-                setupEventListeners();
-                if (_0x1234.currentPlayer === _0x1234.aiColor && _0x1234.gameMode === 'ai') {
-                    setTimeout(() => makeAiMove(), 1000);
-                }
-            }
-
-            function setupEventListeners() {
-                const buttons = [
-                    { id: 'vsAIBtn', handler: handleVsAI },
-                    { id: 'twoPlayersBtn', handler: handleTwoPlayers },
-                    { id: 'passBtn', handler: handlePass },
-                    { id: 'undoBtn', handler: handleUndo },
-                    { id: 'newGameBtn', handler: () => initGame() },
-                    { id: 'scoreBtn', handler: showScore },
-                    { id: 'tutorialBtn', handler: showTutorial },
-                    { id: 'playAsBlack', handler: () => setPlayerColor(BLACK, WHITE) },
-                    { id: 'playAsWhite', handler: () => setPlayerColor(WHITE, BLACK) }
-                ];
-                buttons.forEach(({ id, handler }) => {
-                    const btn = document.getElementById(id);
-                    if (btn) {
-                        const newBtn = btn.cloneNode(true);
-                        btn.parentNode.replaceChild(newBtn, btn);
-                        newBtn.addEventListener('touchstart', (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handler();
-                        }, { passive: false });
-                    }
-                });
-                const boardSizeButtons = document.querySelectorAll('.board-size-selector .difficulty-btn');
-                boardSizeButtons.forEach(btn => {
-                    const newBtn = btn.cloneNode(true);
-                    btn.parentNode.replaceChild(newBtn, btn);
-                    newBtn.addEventListener('touchstart', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        boardSizeButtons.forEach(b => b.classList.remove('active'));
-                        newBtn.classList.add('active');
-                        _0x1234.boardSize = parseInt(e.target.dataset.size);
-                        initGame();
-                    }, { passive: false });
-                });
-                const difficultyButtons = document.querySelectorAll('.difficulty-selector .difficulty-btn');
-                difficultyButtons.forEach(btn => {
-                    const newBtn = btn.cloneNode(true);
-                    btn.parentNode.replaceChild(newBtn, btn);
-                    newBtn.addEventListener('touchstart', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        difficultyButtons.forEach(b => b.classList.remove('active'));
-                        newBtn.classList.add('active');
-                        _0x1234.difficulty = e.target.dataset.difficulty;
-                    }, { passive: false });
-                });
-            }
-
-            function handleVsAI() {
-                _0x1234.gameMode = 'ai';
+           
+            document.querySelectorAll('.difficulty-selector .difficulty-btn').forEach(btn => {
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    document.querySelectorAll('.difficulty-selector .difficulty-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    gameState.difficulty = btn.dataset.difficulty;
+                }, { passive: false });
+            });
+           
+            document.getElementById('playAsBlack').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                gameState.humanColor = BLACK;
+                gameState.aiColor = WHITE;
+                initGame();
+            }, { passive: false });
+           
+            document.getElementById('playAsWhite').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                gameState.humanColor = WHITE;
+                gameState.aiColor = BLACK;
+                initGame();
+            }, { passive: false });
+           
+            // Game mode buttons
+            document.getElementById('vsAIBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                gameState.gameMode = 'ai';
                 document.getElementById('vsAIBtn').className = 'button button-primary';
                 document.getElementById('twoPlayersBtn').className = 'button button-secondary';
                 document.getElementById('aiSettings').style.display = 'block';
                 initGame();
-            }
-
-            function handleTwoPlayers() {
-                _0x1234.gameMode = 'twoPlayers';
+            }, { passive: false });
+           
+            document.getElementById('twoPlayersBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                gameState.gameMode = 'twoPlayers';
                 document.getElementById('twoPlayersBtn').className = 'button button-primary';
                 document.getElementById('vsAIBtn').className = 'button button-secondary';
                 document.getElementById('aiSettings').style.display = 'none';
                 initGame();
-            }
-
-            function setPlayerColor(humanColor, aiColor) {
-                _0x1234.humanColor = humanColor;
-                _0x1234.aiColor = aiColor;
+            }, { passive: false });
+           
+            document.getElementById('passBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handlePass();
+            }, { passive: false });
+           
+            document.getElementById('undoBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleUndo();
+            }, { passive: false });
+           
+            document.getElementById('newGameBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 initGame();
+            }, { passive: false });
+           
+            document.getElementById('scoreBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                showScore();
+            }, { passive: false });
+           
+            document.getElementById('tutorialBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                showTutorial();
+            }, { passive: false });
+           
+            // Keyboard shortcuts (optional for mobile, but harmless)
+            document.addEventListener('keydown', (e) => {
+                if (e.key.toLowerCase() === 'p') handlePass();
+                if (e.ctrlKey && e.key.toLowerCase() === 'z') handleUndo();
+                if (e.key.toLowerCase() === 'n') initGame();
+                if (e.key.toLowerCase() === 's') showScore();
+                if (e.key.toLowerCase() === 't') showTutorial();
+            });
+           
+            // Start AI move if AI plays first
+            if (gameState.currentPlayer === gameState.aiColor && gameState.gameMode === 'ai') {
+                setTimeout(() => makeAiMove(), 1000);
             }
-
-            function clearLastMove() {
-                document.querySelectorAll('.stone.last-move').forEach(stone => {
-                    stone.classList.remove('last-move');
-                });
+        }
+        function clearLastMove() {
+            document.querySelectorAll('.stone.last-move').forEach(stone => {
+                stone.classList.remove('last-move');
+            });
+        }
+        function createBoard() {
+            const size = gameState.boardSize;
+            gameState.board = Array(size).fill().map(() => Array(size).fill(EMPTY));
+            gameState.moveHistory = [];
+            gameState.captures = { black: 0, white: 0 };
+            gameState.passCount = 0;
+            gameState.currentPlayer = BLACK;
+            gameState.gamePhase = 'opening';
+           
+            const boardElement = document.getElementById('gameBoard');
+            const maxWidth = Math.min(window.innerWidth - 40, 360);
+            const cellSize = maxWidth / (size + 1);
+            const boardPixelSize = cellSize * (size - 1);
+            const padding = cellSize / 2;
+           
+            boardElement.style.width = `${boardPixelSize + padding * 2}px`;
+            boardElement.style.height = `${boardPixelSize + padding * 2}px`;
+            boardElement.style.padding = `${padding}px`;
+           
+            boardElement.innerHTML = '';
+           
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.style.position = 'absolute';
+            svg.style.top = '0';
+            svg.style.left = '0';
+            svg.style.width = '100%';
+            svg.style.height = '100%';
+            svg.style.pointerEvents = 'none';
+           
+            for (let i = 0; i < size; i++) {
+                const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                hLine.setAttribute('x1', padding);
+                hLine.setAttribute('y1', padding + i * cellSize);
+                hLine.setAttribute('x2', padding + boardPixelSize);
+                hLine.setAttribute('y2', padding + i * cellSize);
+                hLine.setAttribute('stroke', '#8B4513');
+                hLine.setAttribute('stroke-width', '1.5');
+                svg.appendChild(hLine);
+               
+                const vLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                vLine.setAttribute('x1', padding + i * cellSize);
+                vLine.setAttribute('y1', padding);
+                vLine.setAttribute('x2', padding + i * cellSize);
+                vLine.setAttribute('y2', padding + boardPixelSize);
+                vLine.setAttribute('stroke', '#8B4513');
+                vLine.setAttribute('stroke-width', '1.5');
+                svg.appendChild(vLine);
             }
-
-            function createBoard() {
-                const size = _0x1234.boardSize;
-                _0x1234.board = Array(size).fill().map(() => Array(size).fill(EMPTY));
-                _0x1234.moveHistory = [];
-                _0x1234.captures = { black: 0, white: 0 };
-                _0x1234.passCount = 0;
-                _0x1234.currentPlayer = BLACK;
-                _0x1234.gamePhase = 'opening';
-                const boardElement = document.getElementById('gameBoard');
-                const maxWidth = Math.min(window.innerWidth - 40, 360);
-                const cellSize = maxWidth / (size + 1);
-                const boardPixelSize = cellSize * (size - 1);
-                const padding = cellSize / 2;
-                boardElement.style.width = `${boardPixelSize + padding * 2}px`;
-                boardElement.style.height = `${boardPixelSize + padding * 2}px`;
-                boardElement.style.padding = `${padding}px`;
-                boardElement.innerHTML = '';
-                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                svg.style.position = 'absolute';
-                svg.style.top = '0';
-                svg.style.left = '0';
-                svg.style.width = '100%';
-                svg.style.height = '100%';
-                svg.style.pointerEvents = 'none';
-                for (let i = 0; i < size; i++) {
-                    const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                    hLine.setAttribute('x1', padding);
-                    hLine.setAttribute('y1', padding + i * cellSize);
-                    hLine.setAttribute('x2', padding + boardPixelSize);
-                    hLine.setAttribute('y2', padding + i * cellSize);
-                    hLine.setAttribute('stroke', '#8B4513');
-                    hLine.setAttribute('stroke-width', '1.5');
-                    svg.appendChild(hLine);
-                    const vLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                    vLine.setAttribute('x1', padding + i * cellSize);
-                    vLine.setAttribute('y1', padding);
-                    vLine.setAttribute('x2', padding + i * cellSize);
-                    vLine.setAttribute('y2', padding + boardPixelSize);
-                    vLine.setAttribute('stroke', '#8B4513');
-                    vLine.setAttribute('stroke-width', '1.5');
-                    svg.appendChild(vLine);
+           
+            const starPoints = getStarPoints(size);
+            starPoints.forEach(([x, y]) => {
+                const star = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                star.setAttribute('cx', padding + x * cellSize);
+                star.setAttribute('cy', padding + y * cellSize);
+                star.setAttribute('r', Math.max(cellSize * 0.08, 2));
+                star.setAttribute('fill', '#8B4513');
+                svg.appendChild(star);
+            });
+           
+            boardElement.appendChild(svg);
+           
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const intersection = document.createElement('div');
+                    intersection.className = 'intersection';
+                    intersection.style.left = `${padding + x * cellSize - cellSize/2}px`;
+                    intersection.style.top = `${padding + y * cellSize - cellSize/2}px`;
+                    intersection.style.width = `${cellSize}px`;
+                    intersection.style.height = `${cellSize}px`;
+                    intersection.dataset.x = x;
+                    intersection.dataset.y = y;
+                   
+                    intersection.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (!canMakeMove(x, y)) return;
+                        makeMove(x, y);
+                    }, { passive: false });
+                   
+                    boardElement.appendChild(intersection);
                 }
-                const starPoints = getStarPoints(size);
-                starPoints.forEach(([x, y]) => {
-                    const star = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                    star.setAttribute('cx', padding + x * cellSize);
-                    star.setAttribute('cy', padding + y * cellSize);
-                    star.setAttribute('r', Math.max(cellSize * 0.08, 2));
-                    star.setAttribute('fill', '#8B4513');
-                    svg.appendChild(star);
-                });
-                boardElement.appendChild(svg);
-                for (let y = 0; y < size; y++) {
-                    for (let x = 0; x < size; x++) {
-                        const intersection = document.createElement('div');
-                        intersection.className = 'intersection';
-                        intersection.style.left = `${padding + x * cellSize - cellSize/2}px`;
-                        intersection.style.top = `${padding + y * cellSize - cellSize/2}px`;
-                        intersection.style.width = `${cellSize}px`;
-                        intersection.style.height = `${cellSize}px`;
-                        intersection.dataset.x = x;
-                        intersection.dataset.y = y;
-                        intersection.addEventListener('touchstart', (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (!canMakeMove(x, y)) return;
-                            makeMove(x, y);
-                        }, { passive: false });
-                        boardElement.appendChild(intersection);
-                    }
-                }
             }
-
-            function getStarPoints(size) {
-                const points = [];
-                if (size === 9) {
-                    points.push([2, 2], [6, 2], [2, 6], [6, 6], [4, 4]);
-                } else if (size === 13) {
-                    points.push([3, 3], [9, 3], [3, 9], [9, 9], [6, 6]);
-                    points.push([3, 6], [9, 6], [6, 3], [6, 9]);
-                } else if (size === 19) {
-                    points.push([3, 3], [15, 3], [3, 15], [15, 15], [9, 9]);
-                    points.push([3, 9], [15, 9], [9, 3], [9, 15]);
-                }
-                return points;
+        }
+        function getStarPoints(size) {
+            const points = [];
+            if (size === 9) {
+                points.push([2, 2], [6, 2], [2, 6], [6, 6], [4, 4]);
+            } else if (size === 13) {
+                points.push([3, 3], [9, 3], [3, 9], [9, 9], [6, 6]);
+                points.push([3, 6], [9, 6], [6, 3], [6, 9]);
+            } else if (size === 19) {
+                points.push([3, 3], [15, 3], [3, 15], [15, 15], [9, 9]);
+                points.push([3, 9], [15, 9], [9, 3], [9, 15]);
             }
-
-            function canMakeMove(x, y) {
-                if (_0x1234.isAiThinking) return false;
-                if (_0x1234.gameMode === 'ai' && _0x1234.currentPlayer !== _0x1234.humanColor) {
+            return points;
+        }
+        function canMakeMove(x, y) {
+            if (gameState.isAiThinking) return false;
+            if (gameState.gameMode === 'ai' && gameState.currentPlayer !== gameState.humanColor) {
+                return false;
+            }
+            return isValidMove(x, y);
+        }
+        function isValidMove(x, y) {
+            if (x < 0 || y < 0 || x >= gameState.boardSize || y >= gameState.boardSize) {
+                return false;
+            }
+            if (gameState.board[y][x] !== EMPTY) {
+                return false;
+            }
+            const testBoard = gameState.board.map(row => [...row]);
+            testBoard[y][x] = gameState.currentPlayer;
+            const captured = getCapturedGroups(testBoard, getOpponent(gameState.currentPlayer));
+            if (captured.length === 0) {
+                const ownGroup = getGroup(testBoard, x, y);
+                if (getLiberties(testBoard, ownGroup).length === 0) {
                     return false;
                 }
-                return isValidMove(x, y);
             }
-
-            function isValidMove(x, y) {
-                if (x < 0 || y < 0 || x >= _0x1234.boardSize || y >= _0x1234.boardSize) {
-                    return false;
-                }
-                if (_0x1234.board[y][x] !== EMPTY) {
-                    return false;
-                }
-                const testBoard = _0x1234.board.map(row => [...row]);
-                testBoard[y][x] = _0x1234.currentPlayer;
-                const captured = getCapturedGroups(testBoard, getOpponent(_0x1234.currentPlayer));
-                if (captured.length === 0) {
-                    const ownGroup = getGroup(testBoard, x, y);
-                    if (getLiberties(testBoard, ownGroup).length === 0) {
-                        return false;
-                    }
-                }
-                return true;
-            }
-
-            function makeMove(x, y) {
-                if (!isValidMove(x, y)) return false;
-                const moveData = { x, y, player: _0x1234.currentPlayer, captured: [] };
-                _0x1234.board[y][x] = _0x1234.currentPlayer;
-                const opponent = getOpponent(_0x1234.currentPlayer);
-                const capturedGroups = getCapturedGroups(_0x1234.board, opponent);
-                capturedGroups.forEach(group => {
-                    group.forEach(([cx, cy]) => {
-                        _0x1234.board[cy][cx] = EMPTY;
-                        moveData.captured.push([cx, cy]);
-                        if (_0x1234.currentPlayer === BLACK) {
-                            _0x1234.captures.black++;
-                        } else {
-                            _0x1234.captures.white++;
-                        }
-                        animateCapture(cx, cy);
-                    });
-                });
-                _0x1234.moveHistory.push(moveData);
-                _0x1234.passCount = 0;
-                updateGamePhase();
-                clearLastMove();
-                placeStone(x, y, _0x1234.currentPlayer, true);
-                _0x1234.currentPlayer = getOpponent(_0x1234.currentPlayer);
-                updateDisplay();
-                if (_0x1234.gameMode === 'ai' && _0x1234.currentPlayer === _0x1234.aiColor) {
-                    setTimeout(() => makeAiMove(), 800);
-                }
-                return true;
-            }
-
-            function makeAiMove() {
-                _0x1234.isAiThinking = true;
-                document.getElementById('aiThinking').style.display = 'flex';
-                const thinkingTime = {
-                    easy: 300,
-                    medium: 800,
-                    hard: 1500
-                }[_0x1234.difficulty];
-                setTimeout(() => {
-                    const move = getBestAiMove();
-                    if (move) {
-                        clearLastMove();
-                        makeMove(move.x, move.y);
+            return true;
+        }
+        function makeMove(x, y) {
+            if (!isValidMove(x, y)) return false;
+            const moveData = { x, y, player: gameState.currentPlayer, captured: [] };
+            gameState.board[y][x] = gameState.currentPlayer;
+            const opponent = getOpponent(gameState.currentPlayer);
+            const capturedGroups = getCapturedGroups(gameState.board, opponent);
+            capturedGroups.forEach(group => {
+                group.forEach(([cx, cy]) => {
+                    gameState.board[cy][cx] = EMPTY;
+                    moveData.captured.push([cx, cy]);
+                    if (gameState.currentPlayer === BLACK) {
+                        gameState.captures.black++;
                     } else {
-                        handlePass();
+                        gameState.captures.white++;
                     }
-                    _0x1234.isAiThinking = false;
-                    document.getElementById('aiThinking').style.display = 'none';
-                }, thinkingTime);
-            }
-
-            function getBestAiMove() {
-                const config = AI_CONFIG[_0x1234.difficulty];
-                const moves = [];
-                for (let y = 0; y < _0x1234.boardSize; y++) {
-                    for (let x = 0; x < _0x1234.boardSize; x++) {
-                        if (isValidMove(x, y)) {
-                            const score = evaluateMove(x, y, config);
-                            moves.push({ x, y, score });
-                        }
-                    }
-                }
-                if (moves.length === 0) return null;
-                moves.sort((a, b) => b.score - a.score);
-                const topMoves = Math.max(1, Math.floor(moves.length * (1 - config.randomness)));
-                const selectedIndex = Math.floor(Math.random() * Math.min(topMoves, moves.length));
-                return moves[selectedIndex];
-            }
-
-            function evaluateMove(x, y, config) {
-                let score = 0;
-                const testBoard = _0x1234.board.map(row => [...row]);
-                testBoard[y][x] = _0x1234.aiColor;
-                const capturedGroups = getCapturedGroups(testBoard, _0x1234.humanColor);
-                const captureScore = capturedGroups.reduce((sum, group) => sum + group.length, 0);
-                score += captureScore * config.captureWeight * 20;
-                const territoryScore = evaluateTerritory(testBoard, x, y);
-                score += territoryScore * config.territoryWeight;
-                const patternScore = evaluatePatterns(testBoard, x, y);
-                score += patternScore * config.patternWeight;
-                score += evaluateStrategicPosition(x, y);
-                const escapeScore = evaluateEscape(testBoard, x, y);
-                score += escapeScore * 15;
-                score += Math.random() * 10 * config.randomness;
-                return score;
-            }
-
-            function evaluateTerritory(board, x, y) {
-                let score = 0;
-                const size = board.length;
-                if ((x === 0 || x === size - 1) && (y === 0 || y === size - 1)) {
-                    score += 15;
-                }
-                if (x === 0 || x === size - 1 || y === 0 || y === size - 1) {
-                    score += 8;
-                }
-                const center = Math.floor(size / 2);
-                const distFromCenter = Math.abs(x - center) + Math.abs(y - center);
-                score += Math.max(0, 10 - distFromCenter);
-                const influence = calculateInfluence(board, x, y, _0x1234.aiColor);
-                score += influence * 2;
-                return score;
-            }
-
-            function evaluatePatterns(board, x, y) {
-                let score = 0;
-                score += checkExtensionPattern(board, x, y) * 10;
-                score += checkConnectionPattern(board, x, y) * 12;
-                score += checkEyePattern(board, x, y) * 15;
-                score += checkCutPattern(board, x, y) * 8;
-                return score;
-            }
-
-            function evaluateStrategicPosition(x, y) {
-                let score = 0;
-                const size = _0x1234.boardSize;
-                if (_0x1234.gamePhase === 'opening') {
-                    if ((x < 4 || x >= size - 4) && (y < 4 || y >= size - 4)) {
-                        score += 20;
-                    }
-                    if ((x === 2 && y === 2) || (x === 3 && y === 3) ||
-                        (x === size - 3 && y === 2) || (x === size - 4 && y === 3) ||
-                        (x === 2 && y === size - 3) || (x === 3 && y === size - 4) ||
-                        (x === size - 3 && y === size - 3) || (x === size - 4 && y === size - 4)) {
-                        score += 25;
-                    }
-                }
-                return score;
-            }
-
-            function evaluateEscape(board, x, y) {
-                const testBoard = board.map(row => [...row]);
-                testBoard[y][x] = _0x1234.aiColor;
-                const group = getGroup(testBoard, x, y);
-                const liberties = getLiberties(testBoard, group);
-                if (liberties.length === 1) return -30;
-                if (liberties.length === 2) return -10;
-                if (liberties.length >= 4) return 10;
-                return 0;
-            }
-
-            function calculateInfluence(board, x, y, color) {
-                let influence = 0;
-                const maxDistance = 4;
-                for (let dy = -maxDistance; dy <= maxDistance; dy++) {
-                    for (let dx = -maxDistance; dx <= maxDistance; dx++) {
-                        const nx = x + dx;
-                        const ny = y + dy;
-                        if (nx >= 0 && ny >= 0 && nx < board.length && ny < board.length) {
-                            const distance = Math.abs(dx) + Math.abs(dy);
-                            if (distance > 0 && distance <= maxDistance) {
-                                const weight = 1 / distance;
-                                if (board[ny][nx] === color) {
-                                    influence += weight * 2;
-                                } else if (board[ny][nx] === getOpponent(color)) {
-                                    influence -= weight;
-                                } else {
-                                    influence += weight * 0.5;
-                                }
-                            }
-                        }
-                    }
-                }
-                return influence;
-            }
-
-            function checkExtensionPattern(board, x, y) {
-                let extensions = 0;
-                const directions = [[0,1],[1,0],[0,-1],[-1,0]];
-                directions.forEach(([dx, dy]) => {
-                    const nx = x + dx * 2;
-                    const ny = y + dy * 2;
-                    if (nx >= 0 && ny >= 0 && nx < board.length && ny < board.length) {
-                        if (board[ny][nx] === _0x1234.aiColor) {
-                            extensions++;
-                        }
-                    }
+                    animateCapture(cx, cy);
                 });
-                return extensions;
+            });
+            gameState.moveHistory.push(moveData);
+            gameState.passCount = 0;
+            updateGamePhase();
+            clearLastMove();
+            placeStone(x, y, gameState.currentPlayer, true);
+            gameState.currentPlayer = getOpponent(gameState.currentPlayer);
+            updateDisplay();
+            if (gameState.gameMode === 'ai' && gameState.currentPlayer === gameState.aiColor) {
+                setTimeout(() => makeAiMove(), 800);
             }
-
-            function checkConnectionPattern(board, x, y) {
-                const neighbors = [[0,1],[1,0],[0,-1],[-1,0]];
-                let friendlyGroups = new Set();
-                neighbors.forEach(([dx, dy]) => {
-                    const nx = x + dx;
-                    const ny = y + dy;
-                    if (nx >= 0 && ny >= 0 && nx < board.length && ny < board.length) {
-                        if (board[ny][nx] === _0x1234.aiColor) {
-                            const group = getGroup(board, nx, ny);
-                            friendlyGroups.add(JSON.stringify(group.sort()));
-                        }
-                    }
-                });
-                return friendlyGroups.size >= 2 ? 1 : 0;
-            }
-
-            function checkEyePattern(board, x, y) {
-                const neighbors = [[0,1],[1,0],[0,-1],[-1,0]];
-                let friendlyCount = 0;
-                neighbors.forEach(([dx, dy]) => {
-                    const nx = x + dx;
-                    const ny = y + dy;
-                    if (nx < 0 || ny < 0 || nx >= board.length || ny >= board.length) {
-                        friendlyCount++;
-                    } else if (board[ny][nx] === _0x1234.aiColor) {
-                        friendlyCount++;
-                    }
-                });
-                return friendlyCount >= 3 ? 1 : 0;
-            }
-
-            function checkCutPattern(board, x, y) {
-                const neighbors = [[0,1],[1,0],[0,-1],[-1,0]];
-                let opponentGroups = new Set();
-                neighbors.forEach(([dx, dy]) => {
-                    const nx = x + dx;
-                    const ny = y + dy;
-                    if (nx >= 0 && ny >= 0 && nx < board.length && ny < board.length) {
-                        if (board[ny][nx] === _0x1234.humanColor) {
-                            const group = getGroup(board, nx, ny);
-                            opponentGroups.add(JSON.stringify(group.sort()));
-                        }
-                    }
-                });
-                return opponentGroups.size >= 2 ? 1 : 0;
-            }
-
-            function getGroup(board, x, y) {
-                const color = board[y][x];
-                if (color === EMPTY) return [];
-                const group = [];
-                const visited = new Set();
-                const stack = [[x, y]];
-                while (stack.length > 0) {
-                    const [cx, cy] = stack.pop();
-                    const key = `${cx},${cy}`;
-                    if (visited.has(key)) continue;
-                    visited.add(key);
-                    group.push([cx, cy]);
-                    const neighbors = [[0,1],[1,0],[0,-1],[-1,0]];
-                    neighbors.forEach(([dx, dy]) => {
-                        const nx = cx + dx;
-                        const ny = cy + dy;
-                        if (nx >= 0 && ny >= 0 && nx < board.length && ny < board.length) {
-                            if (board[ny][nx] === color && !visited.has(`${nx},${ny}`)) {
-                                stack.push([nx, ny]);
-                            }
-                        }
-                    });
-                }
-                return group;
-            }
-
-            function getLiberties(board, group) {
-                const liberties = new Set();
-                group.forEach(([x, y]) => {
-                    const neighbors = [[0,1],[1,0],[0,-1],[-1,0]];
-                    neighbors.forEach(([dx, dy]) => {
-                        const nx = x + dx;
-                        const ny = y + dy;
-                        if (nx >= 0 && ny >= 0 && nx < board.length && ny < board.length) {
-                            if (board[ny][nx] === EMPTY) {
-                                liberties.add(`${nx},${ny}`);
-                            }
-                        }
-                    });
-                });
-                return Array.from(liberties).map(pos => {
-                    const [x, y] = pos.split(',').map(Number);
-                    return [x, y];
-                });
-            }
-
-            function getCapturedGroups(board, color) {
-                const capturedGroups = [];
-                const checked = new Set();
-                for (let y = 0; y < board.length; y++) {
-                    for (let x = 0; x < board.length; x++) {
-                        const key = `${x},${y}`;
-                        if (board[y][x] === color && !checked.has(key)) {
-                            const group = getGroup(board, x, y);
-                            group.forEach(([gx, gy]) => checked.add(`${gx},${gy}`));
-                            const liberties = getLiberties(board, group);
-                            if (liberties.length === 0) {
-                                capturedGroups.push(group);
-                            }
-                        }
-                    }
-                }
-                return capturedGroups;
-            }
-
-            function getOpponent(player) {
-                return player === BLACK ? WHITE : BLACK;
-            }
-
-            function placeStone(x, y, color, isLastMove = false) {
-                const maxWidth = Math.min(window.innerWidth - 40, 360);
-                const cellSize = maxWidth / (_0x1234.boardSize + 1);
-                const padding = cellSize / 2;
-                const stone = document.createElement('div');
-                stone.className = `stone ${color === BLACK ? 'black' : 'white'}${isLastMove ? ' last-move' : ''}`;
-                stone.style.position = 'absolute';
-                stone.style.left = `${padding + x * cellSize - cellSize * 0.4}px`;
-                stone.style.top = `${padding + y * cellSize - cellSize * 0.4}px`;
-                stone.style.width = `${cellSize * 0.8}px`;
-                stone.style.height = `${cellSize * 0.8}px`;
-                stone.style.transform = 'scale(0)';
-                stone.style.transition = 'transform 0.3s ease';
-                document.getElementById('gameBoard').appendChild(stone);
-                setTimeout(() => {
-                    stone.style.transform = 'scale(1)';
-                }, 10);
-            }
-
-            function animateCapture(x, y) {
-                const stones = document.querySelectorAll('.stone');
-                const maxWidth = Math.min(window.innerWidth - 40, 360);
-                const cellSize = maxWidth / (_0x1234.boardSize + 1);
-                const padding = cellSize / 2;
-                stones.forEach(stone => {
-                    const stoneX = parseInt(stone.style.left) - padding + cellSize * 0.4;
-                    const stoneY = parseInt(stone.style.top) - padding + cellSize * 0.4;
-                    const expectedX = x * cellSize;
-                    const expectedY = y * cellSize;
-                    if (Math.abs(stoneX - expectedX) < 5 && Math.abs(stoneY - expectedY) < 5) {
-                        stone.classList.add('capturing');
-                        setTimeout(() => stone.remove(), 600);
-                    }
-                });
-            }
-
-            function updateDisplay() {
-                const playerStone = document.getElementById('currentPlayerStone');
-                const playerName = document.getElementById('currentPlayerName');
-                playerStone.className = `player-stone ${_0x1234.currentPlayer === BLACK ? 'black-stone' : 'white-stone'}`;
-                playerName.textContent = _0x1234.currentPlayer === BLACK ? 'Black' : 'White';
-                document.getElementById('blackCaptures').textContent = _0x1234.captures.black;
-                document.getElementById('whiteCaptures').textContent = _0x1234.captures.white;
-                document.getElementById('moveCount').textContent = _0x1234.moveHistory.length;
-                document.getElementById('passCount').textContent = _0x1234.passCount;
-                document.getElementById('gamePhase').textContent =
-                    _0x1234.gamePhase.charAt(0).toUpperCase() + _0x1234.gamePhase.slice(1);
-                updateTerritoryVisualization();
-            }
-
-            function updateGamePhase() {
-                const moveCount = _0x1234.moveHistory.length;
-                const boardSize = _0x1234.boardSize;
-                if (moveCount < boardSize * 2) {
-                    _0x1234.gamePhase = 'opening';
-                } else if (moveCount < boardSize * 4) {
-                    _0x1234.gamePhase = 'middle';
+            return true;
+        }
+        function makeAiMove() {
+            gameState.isAiThinking = true;
+            document.getElementById('aiThinking').style.display = 'flex';
+            const thinkingTime = {
+                easy: 300,
+                medium: 800,
+                hard: 1500
+            }[gameState.difficulty];
+            setTimeout(() => {
+                const move = getBestAiMove();
+                if (move) {
+                    clearLastMove();
+                    makeMove(move.x, move.y);
                 } else {
-                    _0x1234.gamePhase = 'endgame';
+                    handlePass();
                 }
-            }
-
-            function updateTerritoryVisualization() {
-                let blackInfluence = 0;
-                let whiteInfluence = 0;
-                for (let y = 0; y < _0x1234.boardSize; y++) {
-                    for (let x = 0; x < _0x1234.boardSize; x++) {
-                        if (_0x1234.board[y][x] === BLACK) {
-                            blackInfluence += 2;
-                        } else if (_0x1234.board[y][x] === WHITE) {
-                            whiteInfluence += 2;
-                        } else {
-                            const nearbyBlack = countNearbyStones(x, y, BLACK);
-                            const nearbyWhite = countNearbyStones(x, y, WHITE);
-                            blackInfluence += nearbyBlack * 0.1;
-                            whiteInfluence += nearbyWhite * 0.1;
-                        }
+                gameState.isAiThinking = false;
+                document.getElementById('aiThinking').style.display = 'none';
+            }, thinkingTime);
+        }
+        function getBestAiMove() {
+            const config = AI_CONFIG[gameState.difficulty];
+            const moves = [];
+            for (let y = 0; y < gameState.boardSize; y++) {
+                for (let x = 0; x < gameState.boardSize; x++) {
+                    if (isValidMove(x, y)) {
+                        const score = evaluateMove(x, y, config);
+                        moves.push({ x, y, score });
                     }
                 }
-                const total = blackInfluence + whiteInfluence;
-                if (total > 0) {
-                    const blackPercent = (blackInfluence / total) * 100;
-                    const whitePercent = (whiteInfluence / total) * 100;
-                    document.getElementById('blackTerritory').style.width = `${blackPercent}%`;
-                    document.getElementById('whiteTerritory').style.width = `${whitePercent}%`;
+            }
+            if (moves.length === 0) return null;
+            moves.sort((a, b) => b.score - a.score);
+            const topMoves = Math.max(1, Math.floor(moves.length * (1 - config.randomness)));
+            const selectedIndex = Math.floor(Math.random() * Math.min(topMoves, moves.length));
+            return moves[selectedIndex];
+        }
+        function evaluateMove(x, y, config) {
+            let score = 0;
+            const testBoard = gameState.board.map(row => [...row]);
+            testBoard[y][x] = gameState.aiColor;
+            const capturedGroups = getCapturedGroups(testBoard, gameState.humanColor);
+            const captureScore = capturedGroups.reduce((sum, group) => sum + group.length, 0);
+            score += captureScore * config.captureWeight * 20;
+            const territoryScore = evaluateTerritory(testBoard, x, y);
+            score += territoryScore * config.territoryWeight;
+            const patternScore = evaluatePatterns(testBoard, x, y);
+            score += patternScore * config.patternWeight;
+            score += evaluateStrategicPosition(x, y);
+            const escapeScore = evaluateEscape(testBoard, x, y);
+            score += escapeScore * 15;
+            score += Math.random() * 10 * config.randomness;
+            return score;
+        }
+        function evaluateTerritory(board, x, y) {
+            let score = 0;
+            const size = board.length;
+            if ((x === 0 || x === size - 1) && (y === 0 || y === size - 1)) {
+                score += 15;
+            }
+            if (x === 0 || x === size - 1 || y === 0 || y === size - 1) {
+                score += 8;
+            }
+            const center = Math.floor(size / 2);
+            const distFromCenter = Math.abs(x - center) + Math.abs(y - center);
+            score += Math.max(0, 10 - distFromCenter);
+            const influence = calculateInfluence(board, x, y, gameState.aiColor);
+            score += influence * 2;
+            return score;
+        }
+        function evaluatePatterns(board, x, y) {
+            let score = 0;
+            score += checkExtensionPattern(board, x, y) * 10;
+            score += checkConnectionPattern(board, x, y) * 12;
+            score += checkEyePattern(board, x, y) * 15;
+            score += checkCutPattern(board, x, y) * 8;
+            return score;
+        }
+        function evaluateStrategicPosition(x, y) {
+            let score = 0;
+            const size = gameState.boardSize;
+            if (gameState.gamePhase === 'opening') {
+                if ((x < 4 || x >= size - 4) && (y < 4 || y >= size - 4)) {
+                    score += 20;
+                }
+                if ((x === 2 && y === 2) || (x === 3 && y === 3) ||
+                    (x === size - 3 && y === 2) || (x === size - 4 && y === 3) ||
+                    (x === 2 && y === size - 3) || (x === 3 && y === size - 4) ||
+                    (x === size - 3 && y === size - 3) || (x === size - 4 && y === size - 4)) {
+                    score += 25;
                 }
             }
-
-            function countNearbyStones(x, y, color) {
-                let count = 0;
-                const radius = 3;
-                for (let dy = -radius; dy <= radius; dy++) {
-                    for (let dx = -radius; dx <= radius; dx++) {
-                        const nx = x + dx;
-                        const ny = y + dy;
-                        if (nx >= 0 && ny >= 0 && nx < _0x1234.boardSize && ny < _0x1234.boardSize) {
-                            if (_0x1234.board[ny][nx] === color) {
-                                const distance = Math.abs(dx) + Math.abs(dy);
-                                count += 1 / (distance + 1);
-                            }
-                        }
-                    }
-                }
-                return count;
-            }
-
-            function handlePass() {
-                _0x1234.passCount++;
-                _0x1234.moveHistory.push({
-                    x: -1, y: -1,
-                    player: _0x1234.currentPlayer,
-                    isPass: true
-                });
-                if (_0x1234.passCount >= 2) {
-                    showScore();
-                    return;
-                }
-                _0x1234.currentPlayer = getOpponent(_0x1234.currentPlayer);
-                updateDisplay();
-                if (_0x1234.gameMode === 'ai' && _0x1234.currentPlayer === _0x1234.aiColor) {
-                    setTimeout(() => makeAiMove(), 800);
-                }
-            }
-
-            function handleUndo() {
-                if (_0x1234.moveHistory.length === 0) return;
-                const undoCount = (_0x1234.humanColor !== _0x1234.currentPlayer) ? 1 : 2;
-                for (let i = 0; i < undoCount && _0x1234.moveHistory.length > 0; i++) {
-                    const lastMove = _0x1234.moveHistory.pop();
-                    if (!lastMove.isPass) {
-                        _0x1234.board[lastMove.y][lastMove.x] = EMPTY;
-                        lastMove.captured?.forEach(([x, y]) => {
-                            _0x1234.board[y][x] = getOpponent(lastMove.player);
-                            if (lastMove.player === BLACK) {
-                                _0x1234.captures.black--;
+            return score;
+        }
+        function evaluateEscape(board, x, y) {
+            const testBoard = board.map(row => [...row]);
+            testBoard[y][x] = gameState.aiColor;
+            const group = getGroup(testBoard, x, y);
+            const liberties = getLiberties(testBoard, group);
+            if (liberties.length === 1) return -30;
+            if (liberties.length === 2) return -10;
+            if (liberties.length >= 4) return 10;
+            return 0;
+        }
+        function calculateInfluence(board, x, y, color) {
+            let influence = 0;
+            const maxDistance = 4;
+            for (let dy = -maxDistance; dy <= maxDistance; dy++) {
+                for (let dx = -maxDistance; dx <= maxDistance; dx++) {
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    if (nx >= 0 && ny >= 0 && nx < board.length && ny < board.length) {
+                        const distance = Math.abs(dx) + Math.abs(dy);
+                        if (distance > 0 && distance <= maxDistance) {
+                            const weight = 1 / distance;
+                            if (board[ny][nx] === color) {
+                                influence += weight * 2;
+                            } else if (board[ny][nx] === getOpponent(color)) {
+                                influence -= weight;
                             } else {
-                                _0x1234.captures.white--;
+                                influence += weight * 0.5;
                             }
-                        });
-                    }
-                    _0x1234.currentPlayer = lastMove.player;
-                }
-                _0x1234.passCount = 0;
-                rebuildBoardDisplay();
-                updateDisplay();
-            }
-
-            function rebuildBoardDisplay() {
-                document.querySelectorAll('.stone').forEach(stone => stone.remove());
-                for (let y = 0; y < _0x1234.boardSize; y++) {
-                    for (let x = 0; x < _0x1234.boardSize; x++) {
-                        if (_0x1234.board[y][x] !== EMPTY) {
-                            const isLastMove = _0x1234.moveHistory.length > 0 &&
-                                _0x1234.moveHistory[_0x1234.moveHistory.length - 1].x === x &&
-                                _0x1234.moveHistory[_0x1234.moveHistory.length - 1].y === y;
-                            placeStone(x, y, _0x1234.board[y][x], isLastMove);
                         }
                     }
                 }
             }
-
-            function showScore() {
-                const score = calculateFinalScore();
-                const modal = document.createElement('div');
-                modal.className = 'modal';
-                modal.innerHTML = `
-                    <div class="modal-content">
-                        <h2 style="margin-bottom: 20px; color: #333; text-align: center;">Final Score</h2>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0;">
-                            <div style="background: linear-gradient(135deg, #4a5568, #1a202c); color: white; padding: 15px; border-radius: 10px; text-align: center;">
-                                <h3>⚫ Black</h3>
-                                <div style="font-size: 1rem; margin: 8px 0;">
-                                    Territory: ${score.blackTerritory}<br>
-                                    Captures: ${_0x1234.captures.black}
-                                </div>
-                                <div style="font-size: 1.5rem; font-weight: bold; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 10px; margin-top: 10px;">
-                                    ${score.blackTotal}
-                                </div>
+            return influence;
+        }
+        function checkExtensionPattern(board, x, y) {
+            let extensions = 0;
+            const directions = [[0,1],[1,0],[0,-1],[-1,0]];
+            directions.forEach(([dx, dy]) => {
+                const nx = x + dx * 2;
+                const ny = y + dy * 2;
+                if (nx >= 0 && ny >= 0 && nx < board.length && ny < board.length) {
+                    if (board[ny][nx] === gameState.aiColor) {
+                        extensions++;
+                    }
+                }
+            });
+            return extensions;
+        }
+        function checkConnectionPattern(board, x, y) {
+            const neighbors = [[0,1],[1,0],[0,-1],[-1,0]];
+            let friendlyGroups = new Set();
+            neighbors.forEach(([dx, dy]) => {
+                const nx = x + dx;
+                const ny = y + dy;
+                if (nx >= 0 && ny >= 0 && nx < board.length && ny < board.length) {
+                    if (board[ny][nx] === gameState.aiColor) {
+                        const group = getGroup(board, nx, ny);
+                        friendlyGroups.add(JSON.stringify(group.sort()));
+                    }
+                }
+            });
+            return friendlyGroups.size >= 2 ? 1 : 0;
+        }
+        function checkEyePattern(board, x, y) {
+            const neighbors = [[0,1],[1,0],[0,-1],[-1,0]];
+            let friendlyCount = 0;
+            neighbors.forEach(([dx, dy]) => {
+                const nx = x + dx;
+                const ny = y + dy;
+                if (nx < 0 || ny < 0 || nx >= board.length || ny >= board.length) {
+                    friendlyCount++;
+                } else if (board[ny][nx] === gameState.aiColor) {
+                    friendlyCount++;
+                }
+            });
+            return friendlyCount >= 3 ? 1 : 0;
+        }
+        function checkCutPattern(board, x, y) {
+            const neighbors = [[0,1],[1,0],[0,-1],[-1,0]];
+            let opponentGroups = new Set();
+            neighbors.forEach(([dx, dy]) => {
+                const nx = x + dx;
+                const ny = y + dy;
+                if (nx >= 0 && ny >= 0 && nx < board.length && ny < board.length) {
+                    if (board[ny][nx] === gameState.humanColor) {
+                        const group = getGroup(board, nx, ny);
+                        opponentGroups.add(JSON.stringify(group.sort()));
+                    }
+                }
+            });
+            return opponentGroups.size >= 2 ? 1 : 0;
+        }
+        function getGroup(board, x, y) {
+            const color = board[y][x];
+            if (color === EMPTY) return [];
+            const group = [];
+            const visited = new Set();
+            const stack = [[x, y]];
+            while (stack.length > 0) {
+                const [cx, cy] = stack.pop();
+                const key = `${cx},${cy}`;
+                if (visited.has(key)) continue;
+                visited.add(key);
+                group.push([cx, cy]);
+                const neighbors = [[0,1],[1,0],[0,-1],[-1,0]];
+                neighbors.forEach(([dx, dy]) => {
+                    const nx = cx + dx;
+                    const ny = cy + dy;
+                    if (nx >= 0 && ny >= 0 && nx < board.length && ny < board.length) {
+                        if (board[ny][nx] === color && !visited.has(`${nx},${ny}`)) {
+                            stack.push([nx, ny]);
+                        }
+                    }
+                });
+            }
+            return group;
+        }
+        function getLiberties(board, group) {
+            const liberties = new Set();
+            group.forEach(([x, y]) => {
+                const neighbors = [[0,1],[1,0],[0,-1],[-1,0]];
+                neighbors.forEach(([dx, dy]) => {
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    if (nx >= 0 && ny >= 0 && nx < board.length && ny < board.length) {
+                        if (board[ny][nx] === EMPTY) {
+                            liberties.add(`${nx},${ny}`);
+                        }
+                    }
+                });
+            });
+            return Array.from(liberties).map(pos => {
+                const [x, y] = pos.split(',').map(Number);
+                return [x, y];
+            });
+        }
+        function getCapturedGroups(board, color) {
+            const capturedGroups = [];
+            const checked = new Set();
+            for (let y = 0; y < board.length; y++) {
+                for (let x = 0; x < board.length; x++) {
+                    const key = `${x},${y}`;
+                    if (board[y][x] === color && !checked.has(key)) {
+                        const group = getGroup(board, x, y);
+                        group.forEach(([gx, gy]) => checked.add(`${gx},${gy}`));
+                        const liberties = getLiberties(board, group);
+                        if (liberties.length === 0) {
+                            capturedGroups.push(group);
+                        }
+                    }
+                }
+            }
+            return capturedGroups;
+        }
+        function getOpponent(player) {
+            return player === BLACK ? WHITE : BLACK;
+        }
+        function placeStone(x, y, color, isLastMove = false) {
+            const maxWidth = Math.min(window.innerWidth - 40, 360);
+            const cellSize = maxWidth / (gameState.boardSize + 1);
+            const padding = cellSize / 2;
+            const stone = document.createElement('div');
+            stone.className = `stone ${color === BLACK ? 'black' : 'white'}${isLastMove ? ' last-move' : ''}`;
+            stone.style.position = 'absolute';
+            stone.style.left = `${padding + x * cellSize - cellSize * 0.4}px`;
+            stone.style.top = `${padding + y * cellSize - cellSize * 0.4}px`;
+            stone.style.width = `${cellSize * 0.8}px`;
+            stone.style.height = `${cellSize * 0.8}px`;
+            stone.style.transform = 'scale(0)';
+            stone.style.transition = 'transform 0.3s ease';
+            document.getElementById('gameBoard').appendChild(stone);
+            setTimeout(() => {
+                stone.style.transform = 'scale(1)';
+            }, 10);
+        }
+        function animateCapture(x, y) {
+            const stones = document.querySelectorAll('.stone');
+            const maxWidth = Math.min(window.innerWidth - 40, 360);
+            const cellSize = maxWidth / (gameState.boardSize + 1);
+            const padding = cellSize / 2;
+            stones.forEach(stone => {
+                const stoneX = parseInt(stone.style.left) - padding + cellSize * 0.4;
+                const stoneY = parseInt(stone.style.top) - padding + cellSize * 0.4;
+                const expectedX = x * cellSize;
+                const expectedY = y * cellSize;
+                if (Math.abs(stoneX - expectedX) < 5 && Math.abs(stoneY - expectedY) < 5) {
+                    stone.classList.add('capturing');
+                    setTimeout(() => stone.remove(), 600);
+                }
+            });
+        }
+        function updateDisplay() {
+            const playerStone = document.getElementById('currentPlayerStone');
+            const playerName = document.getElementById('currentPlayerName');
+            playerStone.className = `player-stone ${gameState.currentPlayer === BLACK ? 'black-stone' : 'white-stone'}`;
+            playerName.textContent = gameState.currentPlayer === BLACK ? 'Black' : 'White';
+            document.getElementById('blackCaptures').textContent = gameState.captures.black;
+            document.getElementById('whiteCaptures').textContent = gameState.captures.white;
+            document.getElementById('moveCount').textContent = gameState.moveHistory.length;
+            document.getElementById('passCount').textContent = gameState.passCount;
+            document.getElementById('gamePhase').textContent =
+                gameState.gamePhase.charAt(0).toUpperCase() + gameState.gamePhase.slice(1);
+            updateTerritoryVisualization();
+        }
+        function updateGamePhase() {
+            const moveCount = gameState.moveHistory.length;
+            const boardSize = gameState.boardSize;
+            if (moveCount < boardSize * 2) {
+                gameState.gamePhase = 'opening';
+            } else if (moveCount < boardSize * 4) {
+                gameState.gamePhase = 'middle';
+            } else {
+                gameState.gamePhase = 'endgame';
+            }
+        }
+        function updateTerritoryVisualization() {
+            let blackInfluence = 0;
+            let whiteInfluence = 0;
+            for (let y = 0; y < gameState.boardSize; y++) {
+                for (let x = 0; x < gameState.boardSize; x++) {
+                    if (gameState.board[y][x] === BLACK) {
+                        blackInfluence += 2;
+                    } else if (gameState.board[y][x] === WHITE) {
+                        whiteInfluence += 2;
+                    } else {
+                        const nearbyBlack = countNearbyStones(x, y, BLACK);
+                        const nearbyWhite = countNearbyStones(x, y, WHITE);
+                        blackInfluence += nearbyBlack * 0.1;
+                        whiteInfluence += nearbyWhite * 0.1;
+                    }
+                }
+            }
+            const total = blackInfluence + whiteInfluence;
+            if (total > 0) {
+                const blackPercent = (blackInfluence / total) * 100;
+                const whitePercent = (whiteInfluence / total) * 100;
+                document.getElementById('blackTerritory').style.width = `${blackPercent}%`;
+                document.getElementById('whiteTerritory').style.width = `${whitePercent}%`;
+            }
+        }
+        function countNearbyStones(x, y, color) {
+            let count = 0;
+            const radius = 3;
+            for (let dy = -radius; dy <= radius; dy++) {
+                for (let dx = -radius; dx <= radius; dx++) {
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    if (nx >= 0 && ny >= 0 && nx < gameState.boardSize && ny < gameState.boardSize) {
+                        if (gameState.board[ny][nx] === color) {
+                            const distance = Math.abs(dx) + Math.abs(dy);
+                            count += 1 / (distance + 1);
+                        }
+                    }
+                }
+            }
+            return count;
+        }
+        function handlePass() {
+            gameState.passCount++;
+            gameState.moveHistory.push({
+                x: -1, y: -1,
+                player: gameState.currentPlayer,
+                isPass: true
+            });
+            if (gameState.passCount >= 2) {
+                showScore();
+                return;
+            }
+            gameState.currentPlayer = getOpponent(gameState.currentPlayer);
+            updateDisplay();
+            if (gameState.gameMode === 'ai' && gameState.currentPlayer === gameState.aiColor) {
+                setTimeout(() => makeAiMove(), 800);
+            }
+        }
+        function handleUndo() {
+            if (gameState.moveHistory.length === 0) return;
+            const undoCount = (gameState.humanColor !== gameState.currentPlayer) ? 1 : 2;
+            for (let i = 0; i < undoCount && gameState.moveHistory.length > 0; i++) {
+                const lastMove = gameState.moveHistory.pop();
+                if (!lastMove.isPass) {
+                    gameState.board[lastMove.y][lastMove.x] = EMPTY;
+                    lastMove.captured?.forEach(([x, y]) => {
+                        gameState.board[y][x] = getOpponent(lastMove.player);
+                        if (lastMove.player === BLACK) {
+                            gameState.captures.black--;
+                        } else {
+                            gameState.captures.white--;
+                        }
+                    });
+                }
+                gameState.currentPlayer = lastMove.player;
+            }
+            gameState.passCount = 0;
+            rebuildBoardDisplay();
+            updateDisplay();
+        }
+        function rebuildBoardDisplay() {
+            document.querySelectorAll('.stone').forEach(stone => stone.remove());
+            for (let y = 0; y < gameState.boardSize; y++) {
+                for (let x = 0; x < gameState.boardSize; x++) {
+                    if (gameState.board[y][x] !== EMPTY) {
+                        const isLastMove = gameState.moveHistory.length > 0 &&
+                            gameState.moveHistory[gameState.moveHistory.length - 1].x === x &&
+                            gameState.moveHistory[gameState.moveHistory.length - 1].y === y;
+                        placeStone(x, y, gameState.board[y][x], isLastMove);
+                    }
+                }
+            }
+        }
+        function showScore() {
+            const score = calculateFinalScore();
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h2 style="margin-bottom: 20px; color: #333; text-align: center;">Final Score</h2>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0;">
+                        <div style="background: linear-gradient(135deg, #4a5568, #1a202c); color: white; padding: 15px; border-radius: 10px; text-align: center;">
+                            <h3>⚫ Black</h3>
+                            <div style="font-size: 1rem; margin: 8px 0;">
+                                Territory: ${score.blackTerritory}<br>
+                                Captures: ${gameState.captures.black}
                             </div>
-                            <div style="background: linear-gradient(135deg, #ffffff, #e2e8f0); color: #333; padding: 15px; border-radius: 10px; text-align: center; border: 2px solid #cbd5e0;">
-                                <h3>⚪ White</h3>
-                                <div style="font-size: 1rem; margin: 8px 0;">
-                                    Territory: ${score.whiteTerritory}<br>
-                                    Captures: ${_0x1234.captures.white}<br>
-                                    Komi: 6.5
-                                </div>
-                                <div style="font-size: 1.5rem; font-weight: bold; border-top: 1px solid rgba(0,0,0,0.3); padding-top: 10px; margin-top: 10px;">
-                                    ${score.whiteTotal}
-                                </div>
+                            <div style="font-size: 1.5rem; font-weight: bold; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 10px; margin-top: 10px;">
+                                ${score.blackTotal}
                             </div>
                         </div>
-                        <div style="text-align: center; padding: 15px; background: ${score.winner === 'black' ? 'linear-gradient(135deg, #4a5568, #1a202c)' : score.winner === 'white' ? 'linear-gradient(135deg, #ffffff, #e2e8f0)' : 'linear-gradient(135deg, #f093fb, #f5576c)'}; color: ${score.winner === 'white' ? '#333' : 'white'}; border-radius: 10px; margin: 15px 0; font-size: 1.2rem; font-weight: bold;">
-                            ${score.winner === 'tie' ? 'It\'s a Tie!' : `${score.winner === 'black' ? 'Black' : 'White'} Wins!`}
-                            <br>
-                            <span style="font-size: 0.9rem; opacity: 0.8;">by ${Math.abs(score.blackTotal - score.whiteTotal)} points</span>
+                        <div style="background: linear-gradient(135deg, #ffffff, #e2e8f0); color: #333; padding: 15px; border-radius: 10px; text-align: center; border: 2px solid #cbd5e0;">
+                            <h3>⚪ White</h3>
+                            <div style="font-size: 1rem; margin: 8px 0;">
+                                Territory: ${score.whiteTerritory}<br>
+                                Captures: ${gameState.captures.white}<br>
+                                Komi: 6.5
+                            </div>
+                            <div style="font-size: 1.5rem; font-weight: bold; border-top: 1px solid rgba(0,0,0,0.3); padding-top: 10px; margin-top: 10px;">
+                                ${score.whiteTotal}
+                            </div>
                         </div>
-                        <div style="display: flex; gap: 10px; justify-content: center;">
-                            <button class="button button-secondary" onclick="this.closest('.modal').remove()">Close</button>
-                            <button class="button button-primary" onclick="this.closest('.modal').remove(); initGame();">New Game</button>
-                        </div>
-                        <button class="close-button" onclick="this.closest('.modal').remove()">×</button>
                     </div>
-                `;
-                document.body.appendChild(modal);
-            }
-
-            function calculateFinalScore() {
-                let blackTerritory = 0;
-                let whiteTerritory = 0;
-                for (let y = 0; y < _0x1234.boardSize; y++) {
-                    for (let x = 0; x < _0x1234.boardSize; x++) {
-                        if (_0x1234.board[y][x] === EMPTY) {
-                            const nearbyBlack = countNearbyStones(x, y, BLACK);
-                            const nearbyWhite = countNearbyStones(x, y, WHITE);
-                            if (nearbyBlack > nearbyWhite * 1.5) {
-                                blackTerritory++;
-                            } else if (nearbyWhite > nearbyBlack * 1.5) {
-                                whiteTerritory++;
-                            }
+                    <div style="text-align: center; padding: 15px; background: ${score.winner === 'black' ? 'linear-gradient(135deg, #4a5568, #1a202c)' : score.winner === 'white' ? 'linear-gradient(135deg, #ffffff, #e2e8f0)' : 'linear-gradient(135deg, #f093fb, #f5576c)'}; color: ${score.winner === 'white' ? '#333' : 'white'}; border-radius: 10px; margin: 15px 0; font-size: 1.2rem; font-weight: bold;">
+                        ${score.winner === 'tie' ? 'It\'s a Tie!' : `${score.winner === 'black' ? 'Black' : 'White'} Wins!`}
+                        <br>
+                        <span style="font-size: 0.9rem; opacity: 0.8;">by ${Math.abs(score.blackTotal - score.whiteTotal)} points</span>
+                    </div>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button class="button button-secondary" onclick="this.closest('.modal').remove()">Close</button>
+                        <button class="button button-primary" onclick="this.closest('.modal').remove(); initGame();">New Game</button>
+                    </div>
+                    <button class="close-button" onclick="this.closest('.modal').remove()">×</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        function calculateFinalScore() {
+            let blackTerritory = 0;
+            let whiteTerritory = 0;
+            for (let y = 0; y < gameState.boardSize; y++) {
+                for (let x = 0; x < gameState.boardSize; x++) {
+                    if (gameState.board[y][x] === EMPTY) {
+                        const nearbyBlack = countNearbyStones(x, y, BLACK);
+                        const nearbyWhite = countNearbyStones(x, y, WHITE);
+                        if (nearbyBlack > nearbyWhite * 1.5) {
+                            blackTerritory++;
+                        } else if (nearbyWhite > nearbyBlack * 1.5) {
+                            whiteTerritory++;
                         }
                     }
                 }
-                const blackTotal = blackTerritory + _0x1234.captures.black;
-                const whiteTotal = whiteTerritory + _0x1234.captures.white + 6.5;
-                let winner = 'tie';
-                if (blackTotal > whiteTotal) winner = 'black';
-                else if (whiteTotal > blackTotal) winner = 'white';
-                return { blackTerritory, whiteTerritory, blackTotal, whiteTotal, winner };
             }
-
-            function startTimer() {
-                if (_0x1234.timerInterval) {
-                    clearInterval(_0x1234.timerInterval);
-                }
-                _0x1234.timeLeft = 60;
+            const blackTotal = blackTerritory + gameState.captures.black;
+            const whiteTotal = whiteTerritory + gameState.captures.white + 6.5;
+            let winner = 'tie';
+            if (blackTotal > whiteTotal) winner = 'black';
+            else if (whiteTotal > blackTotal) winner = 'white';
+            return { blackTerritory, whiteTerritory, blackTotal, whiteTotal, winner };
+        }
+        function startTimer() {
+            if (gameState.timerInterval) {
+                clearInterval(gameState.timerInterval);
+            }
+            gameState.timeLeft = 60;
+            updateTimerDisplay();
+            gameState.timerInterval = setInterval(() => {
+                gameState.timeLeft--;
                 updateTimerDisplay();
-                _0x1234.timerInterval = setInterval(() => {
-                    _0x1234.timeLeft--;
-                    updateTimerDisplay();
-                    if (_0x1234.timeLeft <= 0) {
-                        clearInterval(_0x1234.timerInterval);
-                        handlePass();
-                        startTimer();
-                    }
-                }, 1000);
-            }
-
-            function updateTimerDisplay() {
-                const minutes = Math.floor(_0x1234.timeLeft / 60);
-                const seconds = _0x1234.timeLeft % 60;
-                const display = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-                document.getElementById('timerDisplay').textContent = display;
-                const timer = document.getElementById('timer');
-                if (_0x1234.timeLeft <= 10) {
-                    timer.classList.add('warning');
-                } else {
-                    timer.classList.remove('warning');
+                if (gameState.timeLeft <= 0) {
+                    clearInterval(gameState.timerInterval);
+                    handlePass();
+                    startTimer();
                 }
+            }, 1000);
+        }
+        function updateTimerDisplay() {
+            const minutes = Math.floor(gameState.timeLeft / 60);
+            const seconds = gameState.timeLeft % 60;
+            const display = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            document.getElementById('timerDisplay').textContent = display;
+            const timer = document.getElementById('timer');
+            if (gameState.timeLeft <= 10) {
+                timer.classList.add('warning');
+            } else {
+                timer.classList.remove('warning');
             }
-
-            function createBackgroundAnimation() {
-                const container = document.getElementById('backgroundAnimation');
-                container.innerHTML = '';
-                for (let i = 0; i < 15; i++) {
-                    const particle = document.createElement('div');
-                    particle.className = 'particle';
-                    particle.style.left = Math.random() * 100 + '%';
-                    particle.style.animationDelay = Math.random() * 4 + 's';
-                    particle.style.animationDuration = (2 + Math.random() * 2) + 's';
-                    container.appendChild(particle);
-                }
+        }
+        function createBackgroundAnimation() {
+            const container = document.getElementById('backgroundAnimation');
+            container.innerHTML = '';
+            for (let i = 0; i < 15; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 4 + 's';
+                particle.style.animationDuration = (2 + Math.random() * 2) + 's';
+                container.appendChild(particle);
             }
-
-            function showTutorial() {
-                const tutorialSteps = [
-                    {
-                        title: "Welcome to Go!",
-                        content: `
-                            <div style="text-align: center; margin: 15px 0;">
-                                <div style="font-size: 2.5rem; margin-bottom: 10px;">☯</div>
-                                <h3 style="color: #333; margin-bottom: 10px;">Go Master Pro Tutorial</h3>
-                                <p style="color: #666; line-height: 1.6;">Go is an ancient board game of strategy and territory control. Let's learn the basics!</p>
+            for (let i = 0; i < 10; i++) {
+                const sparkle = document.createElement('div');
+                sparkle.className = 'sparkle';
+                sparkle.style.left = Math.random() * 100 + '%';
+                sparkle.style.top = Math.random() * 100 + '%';
+                sparkle.style.animationDelay = Math.random() * 3 + 's';
+                sparkle.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+                container.appendChild(sparkle);
+            }
+        }
+        function showTutorial() {
+            const tutorialSteps = [
+                {
+                    title: "Welcome to Go!",
+                    content: `
+                        <div style="text-align: center; margin: 15px 0;">
+                            <div style="font-size: 2.5rem; margin-bottom: 10px;">☯</div>
+                            <h3 style="color: #333; margin-bottom: 10px;">Go Master Pro Tutorial</h3>
+                            <p style="color: #666; line-height: 1.6;">Go is an ancient board game of strategy and territory control. Let's learn the basics!</p>
+                        </div>
+                    `
+                },
+                {
+                    title: "🎯 Goal of the Game",
+                    content: `
+                        <div style="color: #333; line-height: 1.6;">
+                            <h4 style="color: #4ecdc4; margin-bottom: 10px;">Main Objectives:</h4>
+                            <ul style="margin-left: 15px; margin-bottom: 15px;">
+                                <li><strong>Control Territory:</strong> Surround empty areas</li>
+                                <li><strong>Capture Stones:</strong> Remove enemy stones</li>
+                                <li><strong>Score Points:</strong> Territory + Captures = Score</li>
+                            </ul>
+                            <div style="background: #f0f8ff; padding: 10px; border-radius: 8px; border-left: 3px solid #4ecdc4;">
+                                <strong>Note:</strong> White gets 6.5 extra points (Komi).
                             </div>
-                        `
-                    },
-                    {
-                        title: "🎯 Goal of the Game",
-                        content: `
-                            <div style="color: #333; line-height: 1.6;">
-                                <h4 style="color: #4ecdc4; margin-bottom: 10px;">Main Objectives:</h4>
-                                <ul style="margin-left: 15px; margin-bottom: 15px;">
-                                    <li><strong>Control Territory:</strong> Surround empty areas</li>
-                                    <li><strong>Capture Stones:</strong> Remove enemy stones</li>
-                                    <li><strong>Score Points:</strong> Territory + Captures = Score</li>
-                                </ul>
-                                <div style="background: #f0f8ff; padding: 10px; border-radius: 8px; border-left: 3px solid #4ecdc4;">
-                                    <strong>Note:</strong> White gets 6.5 extra points (Komi).
+                        </div>
+                    `
+                },
+                {
+                    title: "🎲 How to Play",
+                    content: `
+                        <div style="color: #333; line-height: 1.6;">
+                            <h4 style="color: #4ecdc4; margin-bottom: 10px;">Basic Rules:</h4>
+                            <ol style="margin-left: 15px; margin-bottom: 15px;">
+                                <li>Tap intersections to place stones</li>
+                                <li>Black plays first, then alternate</li>
+                                <li>Stones need liberties to survive</li>
+                                <li>Surrounded groups are captured</li>
+                                <li>Pass when no good moves remain</li>
+                            </ol>
+                            <div style="background: #fff3cd; padding: 10px; border-radius: 8px; border-left: 3px solid #ffc107;">
+                                <strong>Tip:</strong> Start in corners and edges!
+                            </div>
+                        </div>
+                    `
+                },
+                {
+                    title: "⚔️ Capturing Stones",
+                    content: `
+                        <div style="color: #333; line-height: 1.6;">
+                            <h4 style="color: #ff6b6b; margin-bottom: 10px;">How Capturing Works:</h4>
+                            <div style="display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 15px;">
+                                <div style="background: #f8f9fa; padding: 10px; border-radius: 8px;">
+                                    <h5 style="color: #ff6b6b;">Liberties</h5>
+                                    <p>Empty adjacent points. No liberties = captured.</p>
+                                </div>
+                                <div style="background: #f8f9fa; padding: 10px; border-radius: 8px;">
+                                    <h5 style="color: #ff6b6b;">Groups</h5>
+                                    <p>Connected stones share liberties.</p>
                                 </div>
                             </div>
-                        `
-                    },
-                    {
-                        title: "🎲 How to Play",
-                        content: `
-                            <div style="color: #333; line-height: 1.6;">
-                                <h4 style="color: #4ecdc4; margin-bottom: 10px;">Basic Rules:</h4>
-                                <ol style="margin-left: 15px; margin-bottom: 15px;">
-                                    <li>Tap intersections to place stones</li>
-                                    <li>Black plays first, then alternate</li>
-                                    <li>Stones need liberties to survive</li>
-                                    <li>Surrounded groups are captured</li>
-                                    <li>Pass when no good moves remain</li>
-                                </ol>
-                                <div style="background: #fff3cd; padding: 10px; border-radius: 8px; border-left: 3px solid #ffc107;">
-                                    <strong>Tip:</strong> Start in corners and edges!
-                                </div>
+                            <div style="background: #ffebee; padding: 10px; border-radius: 8px; border-left: 3px solid #ff6b6b;">
+                                <strong>Ko Rule:</strong> No immediate recapture of a single stone.
                             </div>
-                        `
-                    },
-                    {
-                        title: "⚔️ Capturing Stones",
-                        content: `
-                            <div style="color: #333; line-height: 1.6;">
-                                <h4 style="color: #ff6b6b; margin-bottom: 10px;">How Capturing Works:</h4>
-                                <div style="display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 15px;">
-                                    <div style="background: #f8f9fa; padding: 10px; border-radius: 8px;">
-                                        <h5 style="color: #ff6b6b;">Liberties</h5>
-                                        <p>Empty adjacent points. No liberties = captured.</p>
-                                    </div>
-                                    <div style="background: #f8f9fa; padding: 10px; border-radius: 8px;">
-                                        <h5 style="color: #ff6b6b;">Groups</h5>
-                                        <p>Connected stones share liberties.</p>
-                                    </div>
-                                </div>
-                                <div style="background: #ffebee; padding: 10px; border-radius: 8px; border-left: 3px solid #ff6b6b;">
-                                    <strong>Ko Rule:</strong> No immediate recapture of a single stone.
-                                </div>
+                        </div>
+                    `
+                },
+                {
+                    title: "🏗️ Strategy Tips",
+                    content: `
+                        <div style="color: #333; line-height: 1.6;">
+                            <h4 style="color: #4ecdc4; margin-bottom: 10px;">Opening Strategy:</h4>
+                            <ul style="margin-left: 15px; margin-bottom: 15px;">
+                                <li><strong>Corners:</strong> Play 3-3 or 4-4 points</li>
+                                <li><strong>Sides:</strong> Extend for territory</li>
+                                <li><strong>Center:</strong> Fight later</li>
+                            </ul>
+                            <h4 style="color: #4ecdc4; margin-bottom: 10px;">Key Concepts:</h4>
+                            <ul style="margin-left: 15px; margin-bottom: 15px;">
+                                <li><strong>Eyes:</strong> Create for group survival</li>
+                                <li><strong>Connect:</strong> Keep stones together</li>
+                                <li><strong>Cut:</strong> Separate opponent's stones</li>
+                            </ul>
+                            <div style="background: #e8f5e8; padding: 10px; border-radius: 8px; border-left: 3px solid #28a745;">
+                                <strong>Pro Tip:</strong> Two eyes = safe group!
                             </div>
-                        `
-                    },
-                    {
-                        title: "🏗️ Strategy Tips",
-                        content: `
-                            <div style="color: #333; line-height: 1.6;">
-                                <h4 style="color: #4ecdc4; margin-bottom: 10px;">Opening Strategy:</h4>
-                                <ul style="margin-left: 15px; margin-bottom: 15px;">
-                                    <li><strong>Corners:</strong> Play 3-3 or 4-4 points</li>
-                                    <li><strong>Sides:</strong> Extend for territory</li>
-                                    <li><strong>Center:</strong> Fight later</li>
-                                </ul>
-                                <h4 style="color: #4ecdc4; margin-bottom: 10px;">Key Concepts:</h4>
-                                <ul style="margin-left: 15px; margin-bottom: 15px;">
-                                    <li><strong>Eyes:</strong> Create for group survival</li>
-                                    <li><strong>Connect:</strong> Keep stones together</li>
-                                    <li><strong>Cut:</strong> Separate opponent's stones</li>
-                                </ul>
-                                <div style="background: #e8f5e8; padding: 10px; border-radius: 8px; border-left: 3px solid #28a745;">
-                                    <strong>Pro Tip:</strong> Two eyes = safe group!
-                                </div>
-                            </div>
-                        `
-                    },
-                    {
-                        title: "🎮 Game Controls",
-                        content: `
-                            <div style="color: #333; line-height: 1.6;">
-                                <h4 style="color: #4ecdc4; margin-bottom: 10px;">How to Use:</h4>
-                                <div style="display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 15px;">
-                                    <div>
-                                        <h5 style="color: #6c757d;">Game Modes:</h5>
-                                        <ul style="margin-left: 15px;">
-                                            <li><strong>🤖 vs AI:</strong> Play against computer</li>
-                                            <li><strong>👥 Two Players:</strong> Local multiplayer</li>
-                                        </ul>
-                                    </div>
-                                    <div>
-                                        <h5 style="color: #6c757d;">Quick Actions:</h5>
-                                        <ul style="margin-left: 15px;">
-                                            <li><strong>Pass:</strong> Skip your turn</li>
-                                            <li><strong>Undo:</strong> Take back moves</li>
-                                            <li><strong>Score:</strong> See current position</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        `
-                    },
-                    {
-                        title: "🎯 Ready to Play!",
-                        content: `
-                            <div style="text-align: center; color: #333;">
-                                <div style="font-size: 2rem; margin-bottom: 15px;">🚀</div>
-                                <h3 style="color: #4ecdc4; margin-bottom: 15px;">You're Ready!</h3>
-                                <div style="background: #f0f8ff; padding: 15px; border-radius: 10px; margin: 15px 0;">
-                                    <h4 style="color: #333; margin-bottom: 10px;">Quick Tips:</h4>
-                                    <ul style="text-align: left; display: inline-block; margin: 0;">
-                                        <li>Use 9×9 board to learn</li>
-                                        <li>Try Easy AI first</li>
-                                        <li>Secure corners early</li>
-                                        <li>Pass when stuck</li>
-                                        <li>Have fun!</li>
+                        </div>
+                    `
+                },
+                {
+                    title: "🎮 Game Controls",
+                    content: `
+                        <div style="color: #333; line-height: 1.6;">
+                            <h4 style="color: #4ecdc4; margin-bottom: 10px;">How to Use:</h4>
+                            <div style="display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 15px;">
+                                <div>
+                                    <h5 style="color: #6c757d;">Game Modes:</h5>
+                                    <ul style="margin-left: 15px;">
+                                        <li><strong>🤖 vs AI:</strong> Play against computer</li>
+                                        <li><strong>👥 Two Players:</strong> Local multiplayer</li>
                                     </ul>
                                 </div>
-                                <p style="color: #666; font-style: italic;">
-                                    Go is a journey - enjoy learning!
-                                </p>
-                            </div>
-                        `
-                    }
-                ];
-                let currentStep = 0;
-                function createTutorialModal() {
-                    const modal = document.createElement('div');
-                    modal.className = 'modal';
-                    modal.style.zIndex = '2000';
-                    modal.innerHTML = `
-                        <div class="modal-content" style="max-width: 95%;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
-                                <h2 style="color: #333; margin: 0; font-size: 1.2rem;">${tutorialSteps[currentStep].title}</h2>
-                                <div style="background: #4ecdc4; color: white; padding: 3px 10px; border-radius: 15px; font-weight: bold; font-size: 0.8rem;">
-                                    ${currentStep + 1}/${tutorialSteps.length}
-                                </div>
-                            </div>
-                            <div style="min-height: 200px; margin-bottom: 20px;">
-                                ${tutorialSteps[currentStep].content}
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <button class="button button-secondary" onclick="previousStep()"
-                                    ${currentStep === 0 ? 'disabled style="opacity: 0.5;"' : ''}>
-                                    ← Previous
-                                </button>
-                                <div style="display: flex; gap: 5px;">
-                                    ${tutorialSteps.map((_, i) =>
-                                        `<div style="width: 8px; height: 8px; border-radius: 50%; background: ${i === currentStep ? '#4ecdc4' : '#ddd'};"></div>`
-                                    ).join('')}
-                                </div>
                                 <div>
-                                    ${currentStep < tutorialSteps.length - 1 ?
-                                        '<button class="button button-primary" onclick="nextStep()">Next →</button>' :
-                                        '<button class="button button-primary" onclick="closeTutorial()">Start Playing! 🎮</button>'
-                                    }
+                                    <h5 style="color: #6c757d;">Quick Actions:</h5>
+                                    <ul style="margin-left: 15px;">
+                                        <li><strong>Pass:</strong> Skip your turn</li>
+                                        <li><strong>Undo:</strong> Take back moves</li>
+                                        <li><strong>Score:</strong> See current position</li>
+                                    </ul>
                                 </div>
                             </div>
-                            <button class="close-button" onclick="closeTutorial()">×</button>
                         </div>
-                    `;
-                    return modal;
+                    `
+                },
+                {
+                    title: "🎯 Ready to Play!",
+                    content: `
+                        <div style="text-align: center; color: #333;">
+                            <div style="font-size: 2rem; margin-bottom: 15px;">🚀</div>
+                            <h3 style="color: #4ecdc4; margin-bottom: 15px;">You're Ready!</h3>
+                            <div style="background: #f0f8ff; padding: 15px; border-radius: 10px; margin: 15px 0;">
+                                <h4 style="color: #333; margin-bottom: 10px;">Quick Tips:</h4>
+                                <ul style="text-align: left; display: inline-block; margin: 0;">
+                                    <li>Use 9×9 board to learn</li>
+                                    <li>Try Easy AI first</li>
+                                    <li>Secure corners early</li>
+                                    <li>Pass when stuck</li>
+                                    <li>Have fun!</li>
+                                </ul>
+                            </div>
+                            <p style="color: #666; font-style: italic;">
+                                Go is a journey - enjoy learning!
+                            </p>
+                        </div>
+                    `
                 }
-                let tutorialModal = createTutorialModal();
-                document.body.appendChild(tutorialModal);
-                window.nextStep = function() {
-                    if (currentStep < tutorialSteps.length - 1) {
-                        currentStep++;
-                        tutorialModal.remove();
-                        tutorialModal = createTutorialModal();
-                        document.body.appendChild(tutorialModal);
-                    }
-                };
-                window.previousStep = function() {
-                    if (currentStep > 0) {
-                        currentStep--;
-                        tutorialModal.remove();
-                        tutorialModal = createTutorialModal();
-                        document.body.appendChild(tutorialModal);
-                    }
-                };
-                window.closeTutorial = function() {
-                    tutorialModal.remove();
-                    delete window.nextStep;
-                    delete window.previousStep;
-                    delete window.closeTutorial;
-                };
+            ];
+            let currentStep = 0;
+            function createTutorialModal() {
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                modal.style.zIndex = '2000';
+                modal.innerHTML = `
+                    <div class="modal-content" style="max-width: 95%;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+                            <h2 style="color: #333; margin: 0; font-size: 1.2rem;">${tutorialSteps[currentStep].title}</h2>
+                            <div style="background: #4ecdc4; color: white; padding: 3px 10px; border-radius: 15px; font-weight: bold; font-size: 0.8rem;">
+                                ${currentStep + 1}/${tutorialSteps.length}
+                            </div>
+                        </div>
+                        <div style="min-height: 200px; margin-bottom: 20px;">
+                            ${tutorialSteps[currentStep].content}
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <button class="button button-secondary" onclick="previousStep()"
+                                ${currentStep === 0 ? 'disabled style="opacity: 0.5;"' : ''}>
+                                ← Previous
+                            </button>
+                            <div style="display: flex; gap: 5px;">
+                                ${tutorialSteps.map((_, i) =>
+                                    `<div style="width: 8px; height: 8px; border-radius: 50%; background: ${i === currentStep ? '#4ecdc4' : '#ddd'};"></div>`
+                                ).join('')}
+                            </div>
+                            <div>
+                                ${currentStep < tutorialSteps.length - 1 ?
+                                    '<button class="button button-primary" onclick="nextStep()">Next →</button>' :
+                                    '<button class="button button-primary" onclick="closeTutorial()">Start Playing! 🎮</button>'
+                                }
+                            </div>
+                        </div>
+                        <button class="close-button" onclick="closeTutorial()">×</button>
+                    </div>
+                `;
+                return modal;
             }
-
-            document.addEventListener('DOMContentLoaded', initGame);
-            document.addEventListener('contextmenu', (e) => e.preventDefault());
-            document.addEventListener('touchmove', (e) => {
-                if (e.touches.length > 1) {
-                    e.preventDefault();
+            let tutorialModal = createTutorialModal();
+            document.body.appendChild(tutorialModal);
+            window.nextStep = function() {
+                if (currentStep < tutorialSteps.length - 1) {
+                    currentStep++;
+                    tutorialModal.remove();
+                    tutorialModal = createTutorialModal();
+                    document.body.appendChild(tutorialModal);
                 }
-            }, { passive: false });
-            document.addEventListener('selectstart', (e) => e.preventDefault());
-        })();
+            };
+            window.previousStep = function() {
+                if (currentStep > 0) {
+                    currentStep--;
+                    tutorialModal.remove();
+                    tutorialModal = createTutorialModal();
+                    document.body.appendChild(tutorialModal);
+                }
+            };
+            window.closeTutorial = function() {
+                tutorialModal.remove();
+                delete window.nextStep;
+                delete window.previousStep;
+                delete window.closeTutorial;
+            };
+        }
+        document.addEventListener('DOMContentLoaded', initGame);
+        document.addEventListener('contextmenu', (e) => e.preventDefault());
+        document.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        document.addEventListener('selectstart', (e) => e.preventDefault());
     </script>
 </body>
 </html>
