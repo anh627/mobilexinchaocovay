@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+hoàn thiện và fix lại những lỗi sai cho tôi <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -55,6 +55,22 @@
             0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); box-shadow: 0 0 5px #fff; }
             25% { opacity: 1; transform: scale(1) rotate(90deg); box-shadow: 0 0 15px #4ecdc4, 0 0 25px #fff; }
             75% { opacity: 0.8; transform: scale(0.8) rotate(270deg); box-shadow: 0 0 10px #ff6b6b; }
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0; }
+            50% { transform: translateY(-100px) rotate(180deg); opacity: 1; }
+        }
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(102, 126, 234, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(102, 126, 234, 0.8); }
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         .container {
             max-width: 100%;
@@ -567,8 +583,8 @@
         let gameState = {
             board: [],
             boardSize: 9,
-            currentPlayer: 1,
-            gameMode: 'ai',
+            currentPlayer: 1, // 1 = black, 2 = white
+            gameMode: 'ai', // 'ai' or 'twoPlayers'
             humanColor: 1,
             aiColor: 2,
             difficulty: 'medium',
@@ -578,175 +594,173 @@
             gamePhase: 'opening',
             isAiThinking: false,
             timeLeft: 60,
-            timerInterval: null,
-            lastBoardState: null // For Ko rule
+            timerInterval: null
         };
-
         // Constants
         const EMPTY = 0;
         const BLACK = 1;
         const WHITE = 2;
         const BOARD_SIZES = [9, 13, 19];
-
-        // AI difficulty levels
+        // AI difficulty levels with enhanced features
         const AI_CONFIG = {
-            easy: { depth: 1, randomness: 0.4, territoryWeight: 0.3, captureWeight: 0.5, patternWeight: 0.2 },
-            medium: { depth: 2, randomness: 0.2, territoryWeight: 0.5, captureWeight: 0.7, patternWeight: 0.4 },
-            hard: { depth: 3, randomness: 0.1, territoryWeight: 0.8, captureWeight: 1.0, patternWeight: 0.7 }
+            easy: {
+                depth: 1,
+                randomness: 0.4,
+                territoryWeight: 0.3,
+                captureWeight: 0.5,
+                patternWeight: 0.2
+            },
+            medium: {
+                depth: 2,
+                randomness: 0.2,
+                territoryWeight: 0.5,
+                captureWeight: 0.7,
+                patternWeight: 0.4
+            },
+            hard: {
+                depth: 3,
+                randomness: 0.1,
+                territoryWeight: 0.8,
+                captureWeight: 1.0,
+                patternWeight: 0.7
+            }
         };
-
         // Initialize game
         function initGame() {
-            cleanupEventListeners();
-            gameState.board = Array(gameState.boardSize).fill().map(() => Array(gameState.boardSize).fill(EMPTY));
-            gameState.moveHistory = [];
-            gameState.captures = { black: 0, white: 0 };
-            gameState.passCount = 0;
-            gameState.currentPlayer = BLACK;
-            gameState.gamePhase = 'opening';
-            gameState.lastBoardState = null;
             createBoard();
             createBackgroundAnimation();
             updateDisplay();
             startTimer();
-            setupEventListeners();
+             setupEventListeners(); // Call to set up event listeners
             if (gameState.currentPlayer === gameState.aiColor && gameState.gameMode === 'ai') {
                 setTimeout(() => makeAiMove(), 1000);
             }
         }
-
-        // Cleanup event listeners
-        let eventListeners = [];
-        function cleanupEventListeners() {
-            eventListeners.forEach(({ element, type, handler }) => {
-                element.removeEventListener(type, handler);
-            });
-            eventListeners = [];
-        }
-
-        // Setup event listeners
         function setupEventListeners() {
+            // Use touchstart for mobile
             const buttons = [
                 { id: 'vsAIBtn', handler: handleVsAI },
                 { id: 'twoPlayersBtn', handler: handleTwoPlayers },
                 { id: 'passBtn', handler: handlePass },
                 { id: 'undoBtn', handler: handleUndo },
-                { id: 'newGameBtn', handler: initGame },
+                { id: 'newGameBtn', handler: () => initGame() },
                 { id: 'scoreBtn', handler: showScore },
                 { id: 'tutorialBtn', handler: showTutorial },
                 { id: 'playAsBlack', handler: () => setPlayerColor(BLACK, WHITE) },
                 { id: 'playAsWhite', handler: () => setPlayerColor(WHITE, BLACK) }
             ];
-
             buttons.forEach(({ id, handler }) => {
                 const btn = document.getElementById(id);
                 if (btn) {
-                    const touchHandler = (e) => {
+                    btn.addEventListener('touchstart', (e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         handler();
-                    };
-                    btn.addEventListener('touchstart', touchHandler, { passive: false });
-                    eventListeners.push({ element: btn, type: 'touchstart', handler: touchHandler });
+                    }, { passive: false });
                 }
             });
-
             const boardSizeButtons = document.querySelectorAll('.board-size-selector .difficulty-btn');
             boardSizeButtons.forEach(btn => {
-                const touchHandler = (e) => {
+                btn.addEventListener('touchstart', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     boardSizeButtons.forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
-                    gameState.boardSize = parseInt(btn.dataset.size);
+                    gameState.boardSize = parseInt(e.target.dataset.size);
                     initGame();
-                };
-                btn.addEventListener('touchstart', touchHandler, { passive: false });
-                eventListeners.push({ element: btn, type: 'touchstart', handler: touchHandler });
+                }, { passive: false });
             });
-
             const difficultyButtons = document.querySelectorAll('.difficulty-selector .difficulty-btn');
             difficultyButtons.forEach(btn => {
-                const touchHandler = (e) => {
+                btn.addEventListener('touchstart', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     difficultyButtons.forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
-                    gameState.difficulty = btn.dataset.difficulty;
-                };
-                btn.addEventListener('touchstart', touchHandler, { passive: false });
-                eventListeners.push({ element: btn, type: 'touchstart', handler: touchHandler });
-            });
-
-            const keydownHandler = (e) => {
+                    gameState.difficulty = e.target.dataset.difficulty;
+                }, { passive: false });
+          
+    
+            document.getElementById('twoPlayersBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                gameState.gameMode = 'twoPlayers';
+                document.getElementById('twoPlayersBtn').className = 'button button-primary';
+                document.getElementById('vsAIBtn').className = 'button button-secondary';
+                document.getElementById('aiSettings').style.display = 'none';
+                initGame();
+            }, { passive: false });
+           
+            document.getElementById('passBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handlePass();
+            }, { passive: false });
+           
+            document.getElementById('undoBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleUndo();
+            }, { passive: false });
+           
+            document.getElementById('newGameBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                initGame();
+            }, { passive: false });
+           
+            document.getElementById('scoreBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                showScore();
+            }, { passive: false });
+           
+            document.getElementById('tutorialBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                showTutorial();
+            }, { passive: false });
+           
+            // Keyboard shortcuts (optional for mobile, but harmless)
+            document.addEventListener('keydown', (e) => {
                 if (e.key.toLowerCase() === 'p') handlePass();
                 if (e.ctrlKey && e.key.toLowerCase() === 'z') handleUndo();
                 if (e.key.toLowerCase() === 'n') initGame();
                 if (e.key.toLowerCase() === 's') showScore();
                 if (e.key.toLowerCase() === 't') showTutorial();
-            };
-            document.addEventListener('keydown', keydownHandler);
-            eventListeners.push({ element: document, type: 'keydown', handler: keydownHandler });
-
-            const contextMenuHandler = (e) => e.preventDefault();
-            document.addEventListener('contextmenu', contextMenuHandler);
-            eventListeners.push({ element: document, type: 'contextmenu', handler: contextMenuHandler });
-
-            const touchMoveHandler = (e) => {
-                if (e.touches.length > 1) e.preventDefault();
-            };
-            document.addEventListener('touchmove', touchMoveHandler, { passive: false });
-            eventListeners.push({ element: document, type: 'touchmove', handler: touchMoveHandler });
-
-            const selectStartHandler = (e) => e.preventDefault();
-            document.addEventListener('selectstart', selectStartHandler);
-            eventListeners.push({ element: document, type: 'selectstart', handler: selectStartHandler });
+            });
+           
+            // Start AI move if AI plays first
+            if (gameState.currentPlayer === gameState.aiColor && gameState.gameMode === 'ai') {
+                setTimeout(() => makeAiMove(), 1000);
+            }
         }
-
-        // Game mode handlers
-        function handleVsAI() {
-            gameState.gameMode = 'ai';
-            document.getElementById('vsAIBtn').className = 'button button-primary';
-            document.getElementById('twoPlayersBtn').className = 'button button-secondary';
-            document.getElementById('aiSettings').style.display = 'block';
-            initGame();
-        }
-
-        function handleTwoPlayers() {
-            gameState.gameMode = 'twoPlayers';
-            document.getElementById('twoPlayersBtn').className = 'button button-primary';
-            document.getElementById('vsAIBtn').className = 'button button-secondary';
-            document.getElementById('aiSettings').style.display = 'none';
-            initGame();
-        }
-
-        function setPlayerColor(humanColor, aiColor) {
-            gameState.humanColor = humanColor;
-            gameState.aiColor = aiColor;
-            document.getElementById('playAsBlack').className = humanColor === BLACK ? 'button button-primary' : 'button button-secondary';
-            document.getElementById('playAsWhite').className = humanColor === WHITE ? 'button button-primary' : 'button button-secondary';
-            initGame();
-        }
-
         function clearLastMove() {
             document.querySelectorAll('.stone.last-move').forEach(stone => {
                 stone.classList.remove('last-move');
             });
         }
-
         function createBoard() {
             const size = gameState.boardSize;
+            gameState.board = Array(size).fill().map(() => Array(size).fill(EMPTY));
+            gameState.moveHistory = [];
+            gameState.captures = { black: 0, white: 0 };
+            gameState.passCount = 0;
+            gameState.currentPlayer = BLACK;
+            gameState.gamePhase = 'opening';
+           
             const boardElement = document.getElementById('gameBoard');
             const maxWidth = Math.min(window.innerWidth - 40, 360);
             const cellSize = maxWidth / (size + 1);
             const boardPixelSize = cellSize * (size - 1);
             const padding = cellSize / 2;
-
+           
             boardElement.style.width = `${boardPixelSize + padding * 2}px`;
             boardElement.style.height = `${boardPixelSize + padding * 2}px`;
             boardElement.style.padding = `${padding}px`;
+           
             boardElement.innerHTML = '';
-
+           
             const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
             svg.style.position = 'absolute';
             svg.style.top = '0';
@@ -754,7 +768,7 @@
             svg.style.width = '100%';
             svg.style.height = '100%';
             svg.style.pointerEvents = 'none';
-
+           
             for (let i = 0; i < size; i++) {
                 const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                 hLine.setAttribute('x1', padding);
@@ -764,7 +778,7 @@
                 hLine.setAttribute('stroke', '#8B4513');
                 hLine.setAttribute('stroke-width', '1.5');
                 svg.appendChild(hLine);
-
+               
                 const vLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                 vLine.setAttribute('x1', padding + i * cellSize);
                 vLine.setAttribute('y1', padding);
@@ -774,7 +788,7 @@
                 vLine.setAttribute('stroke-width', '1.5');
                 svg.appendChild(vLine);
             }
-
+           
             const starPoints = getStarPoints(size);
             starPoints.forEach(([x, y]) => {
                 const star = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -784,9 +798,9 @@
                 star.setAttribute('fill', '#8B4513');
                 svg.appendChild(star);
             });
-
+           
             boardElement.appendChild(svg);
-
+           
             for (let y = 0; y < size; y++) {
                 for (let x = 0; x < size; x++) {
                     const intersection = document.createElement('div');
@@ -797,32 +811,31 @@
                     intersection.style.height = `${cellSize}px`;
                     intersection.dataset.x = x;
                     intersection.dataset.y = y;
-
-                    const touchHandler = (e) => {
+                   
+                    intersection.addEventListener('touchstart', (e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         if (!canMakeMove(x, y)) return;
                         makeMove(x, y);
-                    };
-                    intersection.addEventListener('touchstart', touchHandler, { passive: false });
-                    eventListeners.push({ element: intersection, type: 'touchstart', handler: touchHandler });
+                    }, { passive: false });
+                   
                     boardElement.appendChild(intersection);
                 }
             }
         }
-
         function getStarPoints(size) {
             const points = [];
             if (size === 9) {
                 points.push([2, 2], [6, 2], [2, 6], [6, 6], [4, 4]);
             } else if (size === 13) {
-                points.push([3, 3], [9, 3], [3, 9], [9, 9], [6, 6], [3, 6], [9, 6], [6, 3], [6, 9]);
+                points.push([3, 3], [9, 3], [3, 9], [9, 9], [6, 6]);
+                points.push([3, 6], [9, 6], [6, 3], [6, 9]);
             } else if (size === 19) {
-                points.push([3, 3], [15, 3], [3, 15], [15, 15], [9, 9], [3, 9], [15, 9], [9, 3], [9, 15]);
+                points.push([3, 3], [15, 3], [3, 15], [15, 15], [9, 9]);
+                points.push([3, 9], [15, 9], [9, 3], [9, 15]);
             }
             return points;
         }
-
         function canMakeMove(x, y) {
             if (gameState.isAiThinking) return false;
             if (gameState.gameMode === 'ai' && gameState.currentPlayer !== gameState.humanColor) {
@@ -830,23 +843,16 @@
             }
             return isValidMove(x, y);
         }
-
         function isValidMove(x, y) {
-            if (x < 0 || y < 0 || x >= gameState.boardSize || y >= gameState.boardSize) return false;
-            if (gameState.board[y][x] !== EMPTY) return false;
-
+            if (x < 0 || y < 0 || x >= gameState.boardSize || y >= gameState.boardSize) {
+                return false;
+            }
+            if (gameState.board[y][x] !== EMPTY) {
+                return false;
+            }
             const testBoard = gameState.board.map(row => [...row]);
             testBoard[y][x] = gameState.currentPlayer;
             const captured = getCapturedGroups(testBoard, getOpponent(gameState.currentPlayer));
-
-            // Check Ko rule
-            if (captured.length === 1 && captured[0].length === 1 && gameState.lastBoardState) {
-                const newBoardState = testBoard.map(row => [...row]);
-                if (JSON.stringify(newBoardState) === JSON.stringify(gameState.lastBoardState)) {
-                    return false;
-                }
-            }
-
             if (captured.length === 0) {
                 const ownGroup = getGroup(testBoard, x, y);
                 if (getLiberties(testBoard, ownGroup).length === 0) {
@@ -855,13 +861,8 @@
             }
             return true;
         }
-
         function makeMove(x, y) {
             if (!isValidMove(x, y)) return false;
-
-            // Save current board state for Ko rule
-            gameState.lastBoardState = gameState.board.map(row => [...row]);
-
             const moveData = { x, y, player: gameState.currentPlayer, captured: [] };
             gameState.board[y][x] = gameState.currentPlayer;
             const opponent = getOpponent(gameState.currentPlayer);
@@ -890,9 +891,7 @@
             }
             return true;
         }
-
         function makeAiMove() {
-            if (gameState.isAiThinking) return;
             gameState.isAiThinking = true;
             document.getElementById('aiThinking').style.display = 'flex';
             const thinkingTime = {
@@ -901,23 +900,17 @@
                 hard: 1500
             }[gameState.difficulty];
             setTimeout(() => {
-                try {
-                    const move = getBestAiMove();
-                    if (move) {
-                        clearLastMove();
-                        makeMove(move.x, move.y);
-                    } else {
-                        handlePass();
-                    }
-                } catch (error) {
-                    console.error('AI move error:', error);
+                const move = getBestAiMove();
+                if (move) {
+                    clearLastMove();
+                    makeMove(move.x, move.y);
+                } else {
                     handlePass();
                 }
                 gameState.isAiThinking = false;
                 document.getElementById('aiThinking').style.display = 'none';
             }, thinkingTime);
         }
-
         function getBestAiMove() {
             const config = AI_CONFIG[gameState.difficulty];
             const moves = [];
@@ -935,7 +928,6 @@
             const selectedIndex = Math.floor(Math.random() * Math.min(topMoves, moves.length));
             return moves[selectedIndex];
         }
-
         function evaluateMove(x, y, config) {
             let score = 0;
             const testBoard = gameState.board.map(row => [...row]);
@@ -953,12 +945,15 @@
             score += Math.random() * 10 * config.randomness;
             return score;
         }
-
         function evaluateTerritory(board, x, y) {
             let score = 0;
             const size = board.length;
-            if ((x === 0 || x === size - 1) && (y === 0 || y === size - 1)) score += 15;
-            if (x === 0 || x === size - 1 || y === 0 || y === size - 1) score += 8;
+            if ((x === 0 || x === size - 1) && (y === 0 || y === size - 1)) {
+                score += 15;
+            }
+            if (x === 0 || x === size - 1 || y === 0 || y === size - 1) {
+                score += 8;
+            }
             const center = Math.floor(size / 2);
             const distFromCenter = Math.abs(x - center) + Math.abs(y - center);
             score += Math.max(0, 10 - distFromCenter);
@@ -966,7 +961,6 @@
             score += influence * 2;
             return score;
         }
-
         function evaluatePatterns(board, x, y) {
             let score = 0;
             score += checkExtensionPattern(board, x, y) * 10;
@@ -975,12 +969,13 @@
             score += checkCutPattern(board, x, y) * 8;
             return score;
         }
-
         function evaluateStrategicPosition(x, y) {
             let score = 0;
             const size = gameState.boardSize;
             if (gameState.gamePhase === 'opening') {
-                if ((x < 4 || x >= size - 4) && (y < 4 || y >= size - 4)) score += 20;
+                if ((x < 4 || x >= size - 4) && (y < 4 || y >= size - 4)) {
+                    score += 20;
+                }
                 if ((x === 2 && y === 2) || (x === 3 && y === 3) ||
                     (x === size - 3 && y === 2) || (x === size - 4 && y === 3) ||
                     (x === 2 && y === size - 3) || (x === 3 && y === size - 4) ||
@@ -990,7 +985,6 @@
             }
             return score;
         }
-
         function evaluateEscape(board, x, y) {
             const testBoard = board.map(row => [...row]);
             testBoard[y][x] = gameState.aiColor;
@@ -1001,7 +995,6 @@
             if (liberties.length >= 4) return 10;
             return 0;
         }
-
         function calculateInfluence(board, x, y, color) {
             let influence = 0;
             const maxDistance = 4;
@@ -1026,7 +1019,6 @@
             }
             return influence;
         }
-
         function checkExtensionPattern(board, x, y) {
             let extensions = 0;
             const directions = [[0,1],[1,0],[0,-1],[-1,0]];
@@ -1034,12 +1026,13 @@
                 const nx = x + dx * 2;
                 const ny = y + dy * 2;
                 if (nx >= 0 && ny >= 0 && nx < board.length && ny < board.length) {
-                    if (board[ny][nx] === gameState.aiColor) extensions++;
+                    if (board[ny][nx] === gameState.aiColor) {
+                        extensions++;
+                    }
                 }
             });
             return extensions;
         }
-
         function checkConnectionPattern(board, x, y) {
             const neighbors = [[0,1],[1,0],[0,-1],[-1,0]];
             let friendlyGroups = new Set();
@@ -1055,7 +1048,6 @@
             });
             return friendlyGroups.size >= 2 ? 1 : 0;
         }
-
         function checkEyePattern(board, x, y) {
             const neighbors = [[0,1],[1,0],[0,-1],[-1,0]];
             let friendlyCount = 0;
@@ -1070,7 +1062,6 @@
             });
             return friendlyCount >= 3 ? 1 : 0;
         }
-
         function checkCutPattern(board, x, y) {
             const neighbors = [[0,1],[1,0],[0,-1],[-1,0]];
             let opponentGroups = new Set();
@@ -1086,7 +1077,6 @@
             });
             return opponentGroups.size >= 2 ? 1 : 0;
         }
-
         function getGroup(board, x, y) {
             const color = board[y][x];
             if (color === EMPTY) return [];
@@ -1112,7 +1102,6 @@
             }
             return group;
         }
-
         function getLiberties(board, group) {
             const liberties = new Set();
             group.forEach(([x, y]) => {
@@ -1127,9 +1116,11 @@
                     }
                 });
             });
-            return Array.from(liberties).map(pos => pos.split(',').map(Number));
+            return Array.from(liberties).map(pos => {
+                const [x, y] = pos.split(',').map(Number);
+                return [x, y];
+            });
         }
-
         function getCapturedGroups(board, color) {
             const capturedGroups = [];
             const checked = new Set();
@@ -1148,11 +1139,9 @@
             }
             return capturedGroups;
         }
-
         function getOpponent(player) {
             return player === BLACK ? WHITE : BLACK;
         }
-
         function placeStone(x, y, color, isLastMove = false) {
             const maxWidth = Math.min(window.innerWidth - 40, 360);
             const cellSize = maxWidth / (gameState.boardSize + 1);
@@ -1171,15 +1160,14 @@
                 stone.style.transform = 'scale(1)';
             }, 10);
         }
-
         function animateCapture(x, y) {
             const stones = document.querySelectorAll('.stone');
             const maxWidth = Math.min(window.innerWidth - 40, 360);
             const cellSize = maxWidth / (gameState.boardSize + 1);
             const padding = cellSize / 2;
             stones.forEach(stone => {
-                const stoneX = parseFloat(stone.style.left) - padding + cellSize * 0.4;
-                const stoneY = parseFloat(stone.style.top) - padding + cellSize * 0.4;
+                const stoneX = parseInt(stone.style.left) - padding + cellSize * 0.4;
+                const stoneY = parseInt(stone.style.top) - padding + cellSize * 0.4;
                 const expectedX = x * cellSize;
                 const expectedY = y * cellSize;
                 if (Math.abs(stoneX - expectedX) < 5 && Math.abs(stoneY - expectedY) < 5) {
@@ -1188,7 +1176,6 @@
                 }
             });
         }
-
         function updateDisplay() {
             const playerStone = document.getElementById('currentPlayerStone');
             const playerName = document.getElementById('currentPlayerName');
@@ -1202,7 +1189,6 @@
                 gameState.gamePhase.charAt(0).toUpperCase() + gameState.gamePhase.slice(1);
             updateTerritoryVisualization();
         }
-
         function updateGamePhase() {
             const moveCount = gameState.moveHistory.length;
             const boardSize = gameState.boardSize;
@@ -1214,7 +1200,6 @@
                 gameState.gamePhase = 'endgame';
             }
         }
-
         function updateTerritoryVisualization() {
             let blackInfluence = 0;
             let whiteInfluence = 0;
@@ -1232,13 +1217,14 @@
                     }
                 }
             }
-            const total = blackInfluence + whiteInfluence || 1;
-            const blackPercent = (blackInfluence / total) * 100;
-            const whitePercent = (whiteInfluence / total) * 100;
-            document.getElementById('blackTerritory').style.width = `${blackPercent}%`;
-            document.getElementById('whiteTerritory').style.width = `${whitePercent}%`;
+            const total = blackInfluence + whiteInfluence;
+            if (total > 0) {
+                const blackPercent = (blackInfluence / total) * 100;
+                const whitePercent = (whiteInfluence / total) * 100;
+                document.getElementById('blackTerritory').style.width = `${blackPercent}%`;
+                document.getElementById('whiteTerritory').style.width = `${whitePercent}%`;
+            }
         }
-
         function countNearbyStones(x, y, color) {
             let count = 0;
             const radius = 3;
@@ -1246,7 +1232,7 @@
                 for (let dx = -radius; dx <= radius; dx++) {
                     const nx = x + dx;
                     const ny = y + dy;
-                    if (nx >= 0 && ny >= 0 && nx < gameState.boardSize && ny < boardSize) {
+                    if (nx >= 0 && ny >= 0 && nx < gameState.boardSize && ny < gameState.boardSize) {
                         if (gameState.board[ny][nx] === color) {
                             const distance = Math.abs(dx) + Math.abs(dy);
                             count += 1 / (distance + 1);
@@ -1256,9 +1242,7 @@
             }
             return count;
         }
-
         function handlePass() {
-            if (gameState.isAiThinking) return;
             gameState.passCount++;
             gameState.moveHistory.push({
                 x: -1, y: -1,
@@ -1275,10 +1259,9 @@
                 setTimeout(() => makeAiMove(), 800);
             }
         }
-
         function handleUndo() {
-            if (gameState.isAiThinking || gameState.moveHistory.length === 0) return;
-            const undoCount = (gameState.gameMode === 'ai' && gameState.humanColor !== gameState.currentPlayer) ? 1 : 2;
+            if (gameState.moveHistory.length === 0) return;
+            const undoCount = (gameState.humanColor !== gameState.currentPlayer) ? 1 : 2;
             for (let i = 0; i < undoCount && gameState.moveHistory.length > 0; i++) {
                 const lastMove = gameState.moveHistory.pop();
                 if (!lastMove.isPass) {
@@ -1295,11 +1278,9 @@
                 gameState.currentPlayer = lastMove.player;
             }
             gameState.passCount = 0;
-            gameState.lastBoardState = null;
             rebuildBoardDisplay();
             updateDisplay();
         }
-
         function rebuildBoardDisplay() {
             document.querySelectorAll('.stone').forEach(stone => stone.remove());
             for (let y = 0; y < gameState.boardSize; y++) {
@@ -1313,9 +1294,7 @@
                 }
             }
         }
-
         function showScore() {
-            if (gameState.isAiThinking) return;
             const score = calculateFinalScore();
             const modal = document.createElement('div');
             modal.className = 'modal';
@@ -1359,7 +1338,6 @@
             `;
             document.body.appendChild(modal);
         }
-
         function calculateFinalScore() {
             let blackTerritory = 0;
             let whiteTerritory = 0;
@@ -1383,7 +1361,6 @@
             else if (whiteTotal > blackTotal) winner = 'white';
             return { blackTerritory, whiteTerritory, blackTotal, whiteTotal, winner };
         }
-
         function startTimer() {
             if (gameState.timerInterval) {
                 clearInterval(gameState.timerInterval);
@@ -1400,7 +1377,6 @@
                 }
             }, 1000);
         }
-
         function updateTimerDisplay() {
             const minutes = Math.floor(gameState.timeLeft / 60);
             const seconds = gameState.timeLeft % 60;
@@ -1413,7 +1389,6 @@
                 timer.classList.remove('warning');
             }
         }
-
         function createBackgroundAnimation() {
             const container = document.getElementById('backgroundAnimation');
             container.innerHTML = '';
@@ -1435,7 +1410,6 @@
                 container.appendChild(sparkle);
             }
         }
-
         function showTutorial() {
             const tutorialSteps = [
                 {
@@ -1573,7 +1547,6 @@
                     `
                 }
             ];
-
             let currentStep = 0;
             function createTutorialModal() {
                 const modal = document.createElement('div');
@@ -1586,4 +1559,65 @@
                             <div style="background: #4ecdc4; color: white; padding: 3px 10px; border-radius: 15px; font-weight: bold; font-size: 0.8rem;">
                                 ${currentStep + 1}/${tutorialSteps.length}
                             </div>
-                        </
+                        </div>
+                        <div style="min-height: 200px; margin-bottom: 20px;">
+                            ${tutorialSteps[currentStep].content}
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <button class="button button-secondary" onclick="previousStep()"
+                                ${currentStep === 0 ? 'disabled style="opacity: 0.5;"' : ''}>
+                                ← Previous
+                            </button>
+                            <div style="display: flex; gap: 5px;">
+                                ${tutorialSteps.map((_, i) =>
+                                    `<div style="width: 8px; height: 8px; border-radius: 50%; background: ${i === currentStep ? '#4ecdc4' : '#ddd'};"></div>`
+                                ).join('')}
+                            </div>
+                            <div>
+                                ${currentStep < tutorialSteps.length - 1 ?
+                                    '<button class="button button-primary" onclick="nextStep()">Next →</button>' :
+                                    '<button class="button button-primary" onclick="closeTutorial()">Start Playing! 🎮</button>'
+                                }
+                            </div>
+                        </div>
+                        <button class="close-button" onclick="closeTutorial()">×</button>
+                    </div>
+                `;
+                return modal;
+            }
+            let tutorialModal = createTutorialModal();
+            document.body.appendChild(tutorialModal);
+            window.nextStep = function() {
+                if (currentStep < tutorialSteps.length - 1) {
+                    currentStep++;
+                    tutorialModal.remove();
+                    tutorialModal = createTutorialModal();
+                    document.body.appendChild(tutorialModal);
+                }
+            };
+            window.previousStep = function() {
+                if (currentStep > 0) {
+                    currentStep--;
+                    tutorialModal.remove();
+                    tutorialModal = createTutorialModal();
+                    document.body.appendChild(tutorialModal);
+                }
+            };
+            window.closeTutorial = function() {
+                tutorialModal.remove();
+                delete window.nextStep;
+                delete window.previousStep;
+                delete window.closeTutorial;
+            };
+        }
+        document.addEventListener('DOMContentLoaded', initGame);
+        document.addEventListener('contextmenu', (e) => e.preventDefault());
+        document.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        document.addEventListener('selectstart', (e) => e.preventDefault());
+    </script>
+</body>
+</html>
